@@ -63,15 +63,6 @@ def carregar_excel(arquivo):
         'ORGANOGRAMA'
     )
 
-    except:
-
-        organograma = pd.DataFrame(
-            columns=[
-                'Processo',
-                'Responsável'
-            ]
-        )
-
     return (
         acoes,
         indicadores,
