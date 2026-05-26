@@ -58,7 +58,21 @@ def carregar_excel(arquivo):
 
     notificacoes = pd.read_excel(xls, 'NOTIFICAÇÕES')
 
-    organograma = pd.read_excel(xls, 'ORGANOGRAMA')
+    try:
+
+    organograma = pd.read_excel(
+        xls,
+        'ORGANOGRAMA'
+    )
+
+except:
+
+    organograma = pd.DataFrame(
+        columns=[
+            'Processo',
+            'Responsável'
+        ]
+    )
 
     return (
         acoes,
