@@ -11,7 +11,7 @@ from datetime import datetime
 # CONFIG
 # =====================================================
 
-TEMPLATE_HTML = 'dashboard_template.html'
+TEMPLATE_HTML = 'template/dashboard_template.html'
 OUTPUT_FOLDER = 'outputs'
 
 Path(OUTPUT_FOLDER).mkdir(exist_ok=True)
