@@ -1,1506 +1,775 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Analytics | Performance & Qualidade</title>
-
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HGP · Dashboard Qualidade</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&display=swap');
-
+/* ── TOKENS ─────────────────────────────────────────────── */
 :root{
-
-    --bg:#071018;
-    --panel:#101C2B;
-    --card:#162436;
-    --border:#223449;
-
-    --txt:#F8FAFC;
-    --muted:#8DA2B5;
-
-    --blue:#1DA1F2;
-    --cyan:#00D2FF;
-    --green:#16C784;
-    --yellow:#F5B700;
-    --red:#FF4D4F;
-
+  --bg:#0D1117; --bg2:#161B22; --bg3:#1C2230; --bg4:#21262D;
+  --border:#30363D; --border2:#3D444D;
+  --text:#E6EDF3; --text2:#8B949E; --text3:#656D76;
+  --green:#3FB950; --green-dim:#1A3A22; --green-t:#3FB95022;
+  --blue:#58A6FF;  --blue-dim:#1A2D4A;  --blue-t:#58A6FF22;
+  --amber:#F0883E; --amber-dim:#3A2210; --amber-t:#F0883E22;
+  --red:#F85149;   --red-dim:#3A1A1A;   --red-t:#F8514922;
+  --purple:#BC8CFF;--purple-dim:#2A1A3A;
+  --hgp-green:#4CAF50; --hgp-teal:#00897B; --hgp-dots:#66BB6A;
+  --radius:8px; --radius-lg:12px; --radius-xl:16px;
+  --font:'Sora',sans-serif; --mono:'JetBrains Mono',monospace;
+  --shadow:0 4px 24px rgba(0,0,0,.4);
 }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 
-*{
+/* ── SCROLLBAR ───────────────────────────────────────────── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:'Inter',sans-serif;
+/* ── LAYOUT ─────────────────────────────────────────────── */
+.app{display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 24px;height:56px;
+        display:flex;align-items:center;justify-content:space-between;gap:16px;position:sticky;top:0;z-index:50}
+.logo-area{display:flex;align-items:center;gap:12px}
+.logo-img{height:32px;width:auto}
+.logo-title{font-size:14px;font-weight:600;color:var(--text);letter-spacing:-.01em}
+.logo-sub{font-size:11px;color:var(--text3);font-family:var(--mono)}
+.topbar-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.date-badge{font-size:11px;font-family:var(--mono);color:var(--text3);background:var(--bg3);
+            border:1px solid var(--border);border-radius:var(--radius);padding:4px 10px}
 
+.main{flex:1;padding:20px 24px;max-width:1400px;width:100%;margin:0 auto}
+
+/* ── SEARCH / FILTER ─────────────────────────────────────── */
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.inp{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);
+     padding:7px 12px;color:var(--text);font-size:12px;font-family:var(--font);outline:none;width:200px}
+.inp:focus{border-color:var(--blue)}
+.sel{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);
+     padding:7px 12px;color:var(--text);font-size:12px;font-family:var(--font);outline:none;cursor:pointer}
+.sel:focus{border-color:var(--blue)}
+.ctrl-label{font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em}
+
+/* ── TEAM TABS ───────────────────────────────────────────── */
+.teams{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.ttab{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-xl);
+      padding:16px 18px;cursor:pointer;transition:all .2s;text-align:left;position:relative;overflow:hidden}
+.ttab::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity .2s;border-radius:var(--radius-xl)}
+.ttab:hover{border-color:var(--border2)}
+.ttab.active::before{opacity:1}
+.ttab.active.geral{border-color:var(--blue)}
+.ttab.active.geral::before{background:var(--blue-t)}
+.ttab.active.tec{border-color:var(--hgp-green)}
+.ttab.active.tec::before{background:#4CAF5018}
+.ttab.active.adm{border-color:var(--amber)}
+.ttab.active.adm::before{background:var(--amber-t)}
+.ttab-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.ttab-icon{font-size:18px}
+.ttab-badge{font-size:10px;font-family:var(--mono);padding:2px 7px;border-radius:20px;border:1px solid}
+.ttab.active.geral .ttab-badge{color:var(--blue);border-color:var(--blue);background:var(--blue-t)}
+.ttab.active.tec   .ttab-badge{color:var(--hgp-green);border-color:var(--hgp-green);background:#4CAF5018}
+.ttab.active.adm   .ttab-badge{color:var(--amber);border-color:var(--amber);background:var(--amber-t)}
+.ttab:not(.active) .ttab-badge{color:var(--text3);border-color:var(--border);background:var(--bg3)}
+.ttab-name{font-size:15px;font-weight:600;margin-bottom:2px}
+.ttab-dir{font-size:11px;color:var(--text3)}
+.ttab-score{font-size:28px;font-weight:700;font-family:var(--mono);margin-top:8px}
+.ttab.active.geral .ttab-score{color:var(--blue)}
+.ttab.active.tec   .ttab-score{color:var(--hgp-green)}
+.ttab.active.adm   .ttab-score{color:var(--amber)}
+.ttab:not(.active) .ttab-score{color:var(--text3)}
+.ttab-sub{font-size:10px;color:var(--text3);margin-top:2px}
+
+/* ── PANEL GRID ─────────────────────────────────────────── */
+.panel-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px}
+.panel-title{font-size:10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;
+             color:var(--text3);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.panel-icon{font-size:14px}
+.stat-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.stat-key{font-size:11px;color:var(--text2);min-width:110px;flex-shrink:0}
+.stat-bar{flex:1;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.stat-fill{height:100%;border-radius:2px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+.stat-val{font-size:11px;font-weight:600;font-family:var(--mono);min-width:42px;text-align:right}
+
+/* ── METRICS ROW ─────────────────────────────────────────── */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px}
+.metric{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px}
+.metric-label{font-size:10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;
+              color:var(--text3);margin-bottom:6px}
+.metric-val{font-size:22px;font-weight:700;font-family:var(--mono)}
+
+/* ── VIEW TOGGLE ─────────────────────────────────────────── */
+.view-toggle{display:flex;background:var(--bg2);border:1px solid var(--border);
+             border-radius:var(--radius);overflow:hidden;width:fit-content;margin-bottom:16px}
+.vbtn{padding:7px 16px;border:none;background:none;cursor:pointer;font-size:12px;
+      font-family:var(--font);color:var(--text3);transition:all .15s}
+.vbtn.active{background:var(--bg4);color:var(--text);font-weight:600}
+.vbtn:hover:not(.active){color:var(--text2)}
+
+/* ── RANKING TABLE ───────────────────────────────────────── */
+.rank-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.rank-hd{display:grid;grid-template-columns:38px 36px 1fr 110px 110px 110px 100px 80px;
+         gap:8px;padding:10px 16px;background:var(--bg3);border-bottom:1px solid var(--border);
+         font-size:10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;
+         color:var(--text3);align-items:center}
+.rank-row{display:grid;grid-template-columns:38px 36px 1fr 110px 110px 110px 100px 80px;
+          gap:8px;padding:11px 16px;border-bottom:1px solid var(--border);cursor:pointer;
+          transition:background .12s;align-items:center}
+.rank-row:last-child{border-bottom:none}
+.rank-row:hover{background:var(--bg3)}
+.rpos{font-size:12px;font-weight:700;font-family:var(--mono);text-align:right;color:var(--text3)}
+.rpos.p1{color:#FFD700}.rpos.p2{color:#C0C0C0}.rpos.p3{color:#CD7F32}
+.av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:10px;font-weight:700;flex-shrink:0;font-family:var(--mono)}
+.rinfo .rname{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rinfo .rsetor{font-size:10px;color:var(--text3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.score-cell{text-align:center}
+.score-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;
+            font-size:11px;font-weight:600;font-family:var(--mono);border:1px solid}
+.mini-bar-wrap{width:100%;display:flex;flex-direction:column;gap:2px}
+.mini-bar-row{display:flex;align-items:center;gap:5px}
+.mini-bar-t{flex:1;height:3px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.mini-bar-f{height:100%;border-radius:2px}
+.mini-lbl{font-size:9px;color:var(--text3);font-family:var(--mono);min-width:28px;text-align:right}
+.notif-cell{font-size:11px;font-family:var(--mono);text-align:center}
+.gol-chip{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;
+          font-weight:700;font-family:var(--mono)}
+
+/* ── CARDS GRID ──────────────────────────────────────────── */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);
+      padding:16px;cursor:pointer;transition:all .18s;position:relative;overflow:hidden}
+.card::after{content:'';position:absolute;inset:0;opacity:0;transition:opacity .2s;pointer-events:none}
+.card:hover{border-color:var(--border2);transform:translateY(-1px)}
+.card:hover::after{opacity:1}
+.card-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.card-name{font-size:12px;font-weight:600;line-height:1.35;margin-bottom:2px}
+.card-setor{font-size:10px;color:var(--text3)}
+.card-badge{font-size:11px;font-weight:700;font-family:var(--mono);padding:3px 9px;
+            border-radius:20px;border:1px solid;white-space:nowrap;flex-shrink:0;margin-left:8px}
+.cpr{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.cpl{font-size:10px;color:var(--text2);min-width:82px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cpl.b{color:var(--text);font-weight:600}
+.cbw{flex:1;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.cbf{height:100%;border-radius:2px}
+.cpv{font-size:10px;font-weight:600;font-family:var(--mono);min-width:34px;text-align:right}
+.card-pills{display:flex;flex-wrap:wrap;gap:3px;margin-top:8px;padding-top:8px;
+            border-top:1px solid var(--border)}
+.pill{font-size:9px;padding:2px 7px;border-radius:20px;font-weight:600;border:1px solid}
+.hint{font-size:9px;color:var(--text3);margin-top:6px;font-family:var(--mono)}
+
+/* ── MODAL ───────────────────────────────────────────────── */
+.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;
+    align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto;backdrop-filter:blur(4px)}
+.mo.open{display:flex}
+.md{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-xl);
+    width:100%;max-width:1000px;max-height:92vh;overflow:hidden;display:flex;flex-direction:column;
+    margin:auto;box-shadow:var(--shadow)}
+.mh{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;
+    align-items:flex-start;gap:12px;flex-shrink:0;background:var(--bg3)}
+.mh-left{display:flex;align-items:flex-start;gap:12px}
+.mav{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+     font-size:14px;font-weight:700;flex-shrink:0;font-family:var(--mono)}
+.mh-title{font-size:15px;font-weight:600}
+.mh-sub{font-size:11px;color:var(--text3);margin-top:3px}
+.mclose{background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3);
+        line-height:1;padding:2px 6px;border-radius:var(--radius);transition:all .12s}
+.mclose:hover{background:var(--bg4);color:var(--text)}
+
+/* Modal score bar */
+.m-scores{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:14px 20px;
+          border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg)}
+.mscore{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+        padding:10px 12px;text-align:center}
+.mscore-lbl{font-size:9px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;
+            color:var(--text3);margin-bottom:4px}
+.mscore-val{font-size:20px;font-weight:700;font-family:var(--mono)}
+.mscore-sub{font-size:9px;color:var(--text3);margin-top:2px}
+.mscore-bar{height:3px;background:var(--bg4);border-radius:2px;overflow:hidden;margin-top:6px}
+.mscore-bar-fill{height:100%;border-radius:2px;transition:width .6s}
+
+/* Modal detail panels */
+.m-panels{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:10px 20px;
+          border-bottom:1px solid var(--border);flex-shrink:0}
+.mpanel{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px}
+.mpanel-title{font-size:9px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;
+              color:var(--text3);margin-bottom:8px}
+.mpanel-stat{display:flex;justify-content:space-between;margin-bottom:3px;font-size:10px}
+.mpanel-stat .k{color:var(--text2)}
+.mpanel-stat .v{font-family:var(--mono);font-weight:600}
+.mpanel-chips{display:flex;flex-wrap:wrap;gap:3px;margin-top:6px}
+.mchip{font-size:9px;padding:1px 6px;border-radius:20px;font-weight:600;border:1px solid}
+
+/* Modal tabs */
+.mtabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;
+       background:var(--bg3);overflow-x:auto}
+.mtab{font-size:11px;padding:9px 14px;border:none;background:none;cursor:pointer;
+      color:var(--text3);font-weight:500;font-family:var(--font);border-bottom:2px solid transparent;
+      white-space:nowrap;transition:all .15s}
+.mtab.active{color:var(--text);border-bottom-color:var(--blue);background:var(--bg2)}
+.mtab:hover:not(.active){color:var(--text2);background:var(--bg4)}
+.tcnt{font-size:9px;font-family:var(--mono);padding:1px 5px;border-radius:20px;margin-left:4px;
+      border:1px solid var(--border);color:var(--text3)}
+.tcnt.r{border-color:var(--red);color:var(--red);background:var(--red-t)}
+.tcnt.g{border-color:var(--green);color:var(--green);background:var(--green-t)}
+.tcnt.a{border-color:var(--amber);color:var(--amber);background:var(--amber-t)}
+
+/* Modal body / table */
+.mbody{overflow-y:auto;padding:16px 20px;flex:1}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{background:var(--bg3);padding:8px 10px;text-align:left;font-weight:600;color:var(--text3);
+   font-size:9px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em;
+   position:sticky;top:0;white-space:nowrap;border-bottom:1px solid var(--border)}
+td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text2)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg3)}
+.tbadge{font-size:9px;padding:2px 7px;border-radius:20px;font-weight:600;border:1px solid;
+        font-family:var(--mono);white-space:nowrap}
+.sc{font-size:9px;padding:2px 8px;border-radius:20px;font-weight:600;font-family:var(--mono);white-space:nowrap}
+.sc-concl{background:var(--green-t);color:var(--green);border:1px solid var(--green)}
+.sc-concl-at{background:var(--blue-t);color:var(--blue);border:1px solid var(--blue)}
+.sc-and{background:var(--amber-t);color:var(--amber);border:1px solid var(--amber)}
+.sc-at{background:var(--red-t);color:var(--red);border:1px solid var(--red)}
+.sc-ni{background:var(--bg4);color:var(--text3);border:1px solid var(--border)}
+.sc-fut{background:var(--bg3);color:var(--text3);border:1px solid var(--border)}
+.sc-sd{background:var(--bg3);color:var(--text3);border:1px solid var(--border)}
+.pm{display:flex;align-items:center;gap:5px}
+.pmbar{width:48px;height:3px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.pmfill{height:100%;border-radius:2px}
+.sit-chip{font-size:9px;padding:2px 7px;border-radius:20px;font-weight:600;font-family:var(--mono)}
+.sit-r{background:var(--green-t);color:var(--green)}
+.sit-a{background:var(--amber-t);color:var(--amber)}
+.sit-n{background:var(--red-t);color:var(--red)}
+.sev-cat{color:#FF6B6B;font-weight:700}
+.sev-grav{color:var(--red)}
+.sev-mod{color:var(--amber)}
+.sev-lev{color:#98C379}
+.sev-circ{color:var(--text2)}
+.ind-ok{color:var(--green);font-weight:700;font-family:var(--mono)}
+.ind-fora{color:var(--red);font-weight:700;font-family:var(--mono)}
+.peso-badge{font-size:8px;padding:1px 5px;border-radius:20px;font-family:var(--mono);
+            border:1px solid;margin-left:4px;vertical-align:middle}
+.no-r{text-align:center;color:var(--text3);padding:2rem;font-size:13px}
+.loading{text-align:center;color:var(--text3);padding:1.5rem;font-size:12px;font-family:var(--mono)}
+footer{text-align:center;font-size:10px;color:var(--text3);padding:16px 24px;
+       border-top:1px solid var(--border);font-family:var(--mono)}
+
+/* ── UTILS ───────────────────────────────────────────────── */
+.no-results{text-align:center;padding:3rem;color:var(--text3);font-size:13px}
+@media(max-width:768px){
+  .main{padding:12px 14px}
+  .teams{grid-template-columns:1fr}
+  .panel-grid{grid-template-columns:1fr}
+  .m-panels{grid-template-columns:1fr}
+  .m-scores{grid-template-columns:repeat(2,1fr)}
+  .rank-hd,.rank-row{grid-template-columns:32px 30px 1fr 80px 60px!important}
 }
-
-body{
-
-    background:linear-gradient(
-        180deg,
-        #071018 0%,
-        #0C1623 100%
-    );
-
-    color:var(--txt);
-
-    min-height:100vh;
-
-    padding:30px;
-
-}
-
-/* HEADER */
-
-header{
-
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-end;
-
-    margin-bottom:30px;
-
-    border-bottom:1px solid var(--border);
-
-    padding-bottom:20px;
-
-}
-
-header h1{
-
-    font-size:42px;
-    font-weight:900;
-    letter-spacing:-2px;
-    text-transform:uppercase;
-
-}
-
-header h1 span{
-
-    color:var(--cyan);
-
-}
-
-.subtitle{
-
-    margin-top:8px;
-    color:var(--muted);
-    font-size:14px;
-
-}
-
-.top-kpis{
-
-    display:flex;
-    gap:20px;
-
-}
-
-.kpi{
-
-    background:var(--panel);
-
-    border:1px solid var(--border);
-
-    padding:18px 25px;
-
-    border-radius:14px;
-
-    min-width:180px;
-
-}
-
-.kpi .lbl{
-
-    font-size:11px;
-    text-transform:uppercase;
-    color:var(--muted);
-    font-weight:700;
-    letter-spacing:1px;
-
-}
-
-.kpi .val{
-
-    font-size:34px;
-    font-weight:900;
-    margin-top:8px;
-
-}
-
-/* CONTROLES */
-
-.controls{
-
-    margin-bottom:30px;
-
-}
-
-.controls input{
-
-    width:100%;
-    max-width:450px;
-
-    background:var(--panel);
-
-    border:1px solid var(--border);
-
-    padding:14px 18px;
-
-    border-radius:12px;
-
-    color:white;
-
-    outline:none;
-
-    font-size:14px;
-
-}
-
-/* GRID */
-
-.grid{
-
-    display:grid;
-
-    grid-template-columns:
-    repeat(
-        auto-fit,
-        minmax(350px,1fr)
-    );
-
-    gap:22px;
-
-}
-
-.card{
-
-    background:linear-gradient(
-        145deg,
-        rgba(22,36,54,.95),
-        rgba(12,24,38,.95)
-    );
-
-    border:1px solid var(--border);
-
-    border-radius:18px;
-
-    padding:24px;
-
-    position:relative;
-
-    overflow:hidden;
-
-    transition:.25s;
-
-    cursor:pointer;
-
-}
-
-.card:hover{
-
-    transform:translateY(-5px);
-
-    border-color:var(--cyan);
-
-    box-shadow:
-    0 10px 35px rgba(0,210,255,.15);
-
-}
-
-.card::before{
-
-    content:'';
-
-    position:absolute;
-
-    left:0;
-    top:0;
-
-    width:5px;
-    height:100%;
-
-}
-
-.status-good::before{
-
-    background:var(--green);
-
-}
-
-.status-warn::before{
-
-    background:var(--yellow);
-
-}
-
-.status-bad::before{
-
-    background:var(--red);
-
-}
-
-.c-header{
-
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
-
-    margin-bottom:24px;
-
-}
-
-.c-title{
-
-    font-size:22px;
-    font-weight:800;
-
-}
-
-.c-sub{
-
-    margin-top:6px;
-
-    color:var(--muted);
-
-    font-size:13px;
-
-}
-
-.score-box{
-
-    background:#0B1623;
-
-    border:1px solid var(--border);
-
-    padding:10px 14px;
-
-    border-radius:12px;
-
-    text-align:center;
-
-}
-
-.score-box .v{
-
-    font-size:26px;
-    font-weight:900;
-
-}
-
-.score-box .l{
-
-    font-size:10px;
-    text-transform:uppercase;
-    color:var(--muted);
-
-}
-
-/* STATS */
-
-.stats{
-
-    display:grid;
-
-    grid-template-columns:
-    repeat(2,1fr);
-
-    gap:16px;
-
-}
-
-.stat{
-
-    background:rgba(255,255,255,.02);
-
-    border:1px solid rgba(255,255,255,.03);
-
-    padding:14px;
-
-    border-radius:12px;
-
-}
-
-.stat .lbl{
-
-    font-size:11px;
-    color:var(--muted);
-    text-transform:uppercase;
-
-}
-
-.stat .val{
-
-    margin-top:8px;
-
-    font-size:24px;
-    font-weight:800;
-
-}
-
-/* MODAL */
-
-.modal-overlay{
-
-    position:fixed;
-
-    left:0;
-    top:0;
-
-    width:100%;
-    height:100%;
-
-    background:rgba(0,0,0,.75);
-
-    display:none;
-
-    justify-content:center;
-    align-items:center;
-
-    z-index:999;
-
-}
-
-.modal{
-
-    width:92%;
-    max-width:1200px;
-
-    background:var(--panel);
-
-    border:1px solid var(--border);
-
-    border-radius:20px;
-
-    overflow:hidden;
-
-}
-
-.modal-header{
-
-    padding:25px 30px;
-
-    border-bottom:1px solid var(--border);
-
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-
-}
-
-.modal-title{
-
-    font-size:28px;
-    font-weight:900;
-
-}
-
-.close{
-
-    font-size:34px;
-    cursor:pointer;
-
-}
-
-.modal-body{
-
-    padding:30px;
-
-}
-
-.detail-grid{
-
-    display:grid;
-
-    grid-template-columns:
-    repeat(3,1fr);
-
-    gap:20px;
-
-}
-
-.detail-card{
-
-    background:var(--card);
-
-    border:1px solid var(--border);
-
-    border-radius:16px;
-
-    padding:22px;
-
-}
-
-.detail-card .lbl{
-
-    font-size:11px;
-    text-transform:uppercase;
-    color:var(--muted);
-
-}
-
-.detail-card .val{
-
-    margin-top:12px;
-
-    font-size:38px;
-    font-weight:900;
-
-}
-
-@media(max-width:900px){
-
-    .detail-grid{
-
-        grid-template-columns:1fr;
-
-    }
-
-    header{
-
-        flex-direction:column;
-        align-items:flex-start;
-        gap:20px;
-
-    }
-
-}
-
 </style>
-
 </head>
-
 <body>
-
-<script>
-
-/* =====================================================
-   BLOCO PADRÃO - NÃO ALTERAR
-===================================================== */
-
-const RESP = {};
-
-/* =====================================================
-   PROCESSAMENTO DINÂMICO
-===================================================== */
-
-let dadosProcessados = {}
-
-function n(v){
-
-    return String(v || '')
-    .trim()
-    .toLowerCase()
-
-}
-
-function num(v){
-
-    if(v === null || v === undefined){
-
-        return 0
-
-    }
-
-    if(typeof v === 'number'){
-
-        return v
-
-    }
-
-    const t = String(v)
-    .replace('%','')
-    .replace(',','.')
-    .trim()
-
-    const r = parseFloat(t)
-
-    return isNaN(r) ? 0 : r
-
-}
-
-function statusClasse(score){
-
-    if(score >= 85){
-
-        return 'status-good'
-
-    }
-
-    if(score >= 60){
-
-        return 'status-warn'
-
-    }
-
-    return 'status-bad'
-}
-
-function corScore(score){
-
-    if(score >= 85){
-
-        return 'var(--green)'
-
-    }
-
-    if(score >= 60){
-
-        return 'var(--yellow)'
-
-    }
-
-    return 'var(--red)'
-}
-
-function formatarNumero(v){
-
-    return Number(v || 0).toFixed(0)
-}
-
-function criarProcesso(nome){
-
-    if(!dadosProcessados[nome]){
-
-        dadosProcessados[nome] = {
-
-            nome:nome,
-
-            gestor:'Não Definido',
-
-            score_geral:0,
-
-            risco:{
-                nivel:'BAIXO',
-                tendencia:'ESTÁVEL'
-            },
-
-            performance:{
-                acoes:0,
-                indicadores:0,
-                resolutividade:0
-            },
-
-            acoes:[],
-            indicadores:[],
-            notificacoes:[]
-
-        }
-
-    }
-
-    return dadosProcessados[nome]
-
-}
-
-function processarDados(){
-
-    dadosProcessados = {}
-
-    const acoes = RESP.acoes || []
-    const indicadores = RESP.indicadores || []
-    const notificacoes = RESP.notificacoes || []
-
-    /* =========================
-       AÇÕES
-    ========================= */
-
-    acoes.forEach(a=>{
-
-        const nome = (
-
-            a.Setor ||
-            a.Processo ||
-            a.Area ||
-            'Não Informado'
-
-        )
-
-        const p = criarProcesso(nome)
-
-        p.gestor = (
-
-            a.Responsavel ||
-            a.Responsável ||
-            p.gestor
-
-        )
-
-        p.acoes.push(a)
-
-    })
-
-    /* =========================
-       INDICADORES
-    ========================= */
-
-    indicadores.forEach(i=>{
-
-        const nome = (
-
-            i.Setor ||
-            i.Processo ||
-            i.Area ||
-            'Não Informado'
-
-        )
-
-        const p = criarProcesso(nome)
-
-        p.indicadores.push(i)
-
-    })
-
-    /* =========================
-       NOTIFICAÇÕES
-    ========================= */
-
-    notificacoes.forEach(notif=>{
-
-        const nome = (
-
-            notif['Processo Notificado'] ||
-            notif.Processo ||
-            notif.Setor ||
-            'Não Informado'
-
-        )
-
-        const p = criarProcesso(nome)
-
-        p.notificacoes.push(notif)
-
-    })
-
-    /* =========================
-       SCORE
-    ========================= */
-
-    Object.values(
-        dadosProcessados
-    ).forEach(proc=>{
-
-        /* AÇÕES */
-
-        let somaAcoes = 0
-
-        proc.acoes.forEach(a=>{
-
-            let progresso = num(
-
-                a.Progresso ||
-                a.Andamento ||
-                a.Percentual ||
-                0
-
-            )
-
-            if(progresso <= 1){
-
-                progresso = progresso * 100
-
-            }
-
-            somaAcoes += progresso
-
-        })
-
-        proc.performance.acoes = (
-
-            proc.acoes.length > 0
-
-            ?
-
-            somaAcoes / proc.acoes.length
-
-            :
-
-            100
-
-        )
-
-        /* INDICADORES */
-
-        let pesoTotal = 0
-        let scoreIndicadores = 0
-
-        proc.indicadores.forEach(i=>{
-
-            const nomeIndicador = n(
-
-                i.Indicador ||
-                i.Indicadores ||
-                i.Nome ||
-                ''
-
-            )
-
-            let peso = 1
-
-            if(
-
-                nomeIndicador.includes('estratégico') ||
-                nomeIndicador.includes('estrategico') ||
-                nomeIndicador.includes('resultado')
-
-            ){
-
-                peso = 3
-
-            }
-
-            const status = n(
-
-                i.Status ||
-                i.Prazo ||
-                i.Situacao ||
-                ''
-
-            )
-
-            let nota = 20
-
-            if(
-
-                status.includes('dentro') ||
-                status.includes('ok') ||
-                status.includes('atingido')
-
-            ){
-
-                nota = 100
-
-            }
-            else if(
-
-                status.includes('atenção') ||
-                status.includes('atencao') ||
-                status.includes('parcial')
-
-            ){
-
-                nota = 60
-
-            }
-
-            pesoTotal += peso
-
-            scoreIndicadores += (
-
-                nota * peso
-
-            )
-
-        })
-
-        proc.performance.indicadores = (
-
-            pesoTotal > 0
-
-            ?
-
-            scoreIndicadores / pesoTotal
-
-            :
-
-            100
-
-        )
-
-        /* NOTIFICAÇÕES */
-
-        let scoreNotif = 100
-
-        if(proc.notificacoes.length > 0){
-
-            let somaNotif = 0
-
-            proc.notificacoes.forEach(nf=>{
-
-                const status = n(
-
-                    nf.Situação ||
-                    nf.Situacao ||
-                    nf.Status ||
-                    ''
-
-                )
-
-                const tipo = n(
-
-                    nf.Tipo || ''
-
-                )
-
-                let nota = 100
-
-                if(
-
-                    status.includes('nova') ||
-                    status.includes('pendente')
-
-                ){
-
-                    nota = 20
-
-                }
-                else if(
-
-                    status.includes('tratativa') ||
-                    status.includes('analise')
-
-                ){
-
-                    nota = 60
-
-                }
-
-                if(
-
-                    tipo.includes('incidente')
-
-                ){
-
-                    nota -= 20
-
-                }
-
-                somaNotif += nota
-
-            })
-
-            scoreNotif = (
-
-                somaNotif /
-                proc.notificacoes.length
-
-            )
-
-        }
-
-        proc.performance.resolutividade = scoreNotif
-
-        /* SCORE FINAL */
-
-        proc.score_geral = (
-
-            proc.performance.acoes * 0.35 +
-
-            proc.performance.indicadores * 0.40 +
-
-            proc.performance.resolutividade * 0.25
-
-        )
-
-        proc.score_geral = Math.max(
-            0,
-            Math.min(100,proc.score_geral)
-        )
-
-        /* RISCO */
-
-        if(proc.score_geral >= 85){
-
-            proc.risco.nivel = 'BAIXO'
-            proc.risco.tendencia = 'POSITIVA'
-
-        }
-        else if(proc.score_geral >= 60){
-
-            proc.risco.nivel = 'MODERADO'
-            proc.risco.tendencia = 'ATENÇÃO'
-
-        }
-        else{
-
-            proc.risco.nivel = 'CRÍTICO'
-            proc.risco.tendencia = 'NEGATIVA'
-
-        }
-
-    })
-
-}
-
-</script>
-
-<header>
-
+<div class="app">
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo-area">
+    <img class="logo-img" src="data:image/png;base64,""" + logo_b64 + """" alt="HGP">
     <div>
-
-        <h1>
-            Performance
-            <span>
-                Analytics
-            </span>
-        </h1>
-
-        <div class="subtitle">
-
-            Dashboard Corporativo ONA
-
-        </div>
-
+      <div class="logo-title">Dashboard Qualidade</div>
+      <div class="logo-sub">HGP · Sistema de Gestão</div>
     </div>
-
-    <div class="top-kpis">
-
-        <div class="kpi">
-
-            <div class="lbl">
-
-                Score Global
-
-            </div>
-
-            <div
-                class="val"
-                id="kpi-score"
-            >
-                0%
-            </div>
-
-        </div>
-
-        <div class="kpi">
-
-            <div class="lbl">
-
-                Ocorrências Críticas
-
-            </div>
-
-            <div
-                class="val"
-                id="kpi-crits"
-            >
-                0
-            </div>
-
-        </div>
-
+  </div>
+  <div class="topbar-right">
+    <div class="controls" style="margin:0">
+      <span class="ctrl-label">Buscar</span>
+      <input class="inp" id="search" type="text" placeholder="Responsável..." oninput="render()">
+      <span class="ctrl-label">Filtro</span>
+      <select class="sel" id="filt" onchange="render()">
+        <option value="">Todos</option>
+        <option value="at">Ações atrasadas</option>
+        <option value="ni">Não iniciadas</option>
+        <option value="ind_fora">Ind. fora prazo</option>
+        <option value="notif_ab">Notif. pendentes</option>
+        <option value="sev">Eventos graves</option>
+      </select>
     </div>
-
-</header>
-
-<div class="controls">
-
-    <input
-        type="text"
-        id="search-input"
-        placeholder="Buscar processo, setor ou tendência..."
-        onkeyup="renderDashboard()"
-    >
-
+    <div class="date-badge" id="date-badge">Maio 2026</div>
+  </div>
 </div>
 
-<div
-    class="grid"
-    id="main-grid"
-></div>
+<div class="main">
 
-<div
-    class="modal-overlay"
-    id="modal"
-    onclick="if(event.target===this)closeModal()"
->
-
-    <div class="modal">
-
-        <div class="modal-header">
-
-            <div>
-
-                <div
-                    class="modal-title"
-                    id="modal-title"
-                >
-                    Processo
-                </div>
-
-                <div
-                    id="modal-subtitle"
-                    style="
-                        margin-top:6px;
-                        color:var(--muted);
-                    "
-                >
-                    Risco
-                </div>
-
-            </div>
-
-            <div
-                class="close"
-                onclick="closeModal()"
-            >
-                ×
-            </div>
-
-        </div>
-
-        <div
-            class="modal-body"
-            id="modal-body"
-        ></div>
-
+<!-- TEAM TABS -->
+<div class="teams">
+  <button class="ttab active geral" id="tt-geral" onclick="setTeam('geral')">
+    <div class="ttab-top">
+      <span class="ttab-icon">&#127919;</span>
+      <span class="ttab-badge" id="tb-geral">GERAL</span>
     </div>
-
+    <div class="ttab-name">Time Geral</div>
+    <div class="ttab-dir">Diretoria Geral</div>
+    <div class="ttab-score" id="ts-geral">—</div>
+    <div class="ttab-sub" id="tsub-geral">Score composto</div>
+  </button>
+  <button class="ttab tec" id="tt-tec" onclick="setTeam('tec')">
+    <div class="ttab-top">
+      <span class="ttab-icon">&#128203;</span>
+      <span class="ttab-badge" id="tb-tec">TÉCNICO</span>
+    </div>
+    <div class="ttab-name">Time Técnico</div>
+    <div class="ttab-dir">Diretoria Técnica</div>
+    <div class="ttab-score" id="ts-tec">—</div>
+    <div class="ttab-sub" id="tsub-tec">Score composto</div>
+  </button>
+  <button class="ttab adm" id="tt-adm" onclick="setTeam('adm')">
+    <div class="ttab-top">
+      <span class="ttab-icon">&#128200;</span>
+      <span class="ttab-badge" id="tb-adm">GESTÃO</span>
+    </div>
+    <div class="ttab-name">Time Gestão</div>
+    <div class="ttab-dir">Dir. Adm/Financeira</div>
+    <div class="ttab-score" id="ts-adm">—</div>
+    <div class="ttab-sub" id="tsub-adm">Score composto</div>
+  </button>
 </div>
+
+<div class="panel-grid" id="panel-grid"></div>
+<div class="metrics" id="metrics"></div>
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+  <div class="view-toggle">
+    <button class="vbtn active" id="vb-rank" onclick="setView('rank')">&#9651; Ranking</button>
+    <button class="vbtn" id="vb-cards" onclick="setView('cards')">&#9783; Cards</button>
+  </div>
+  <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">
+    Score = Ações 45% · Indicadores 35% · Notificações 20% · Pesos: ONA×1.5 · PE×1.2 · Resultado×1.5 · Processo×1.2
+  </div>
+</div>
+<div id="content"></div>
+</div>
+
+<footer>HGP · Dashboard Qualidade · Ações ONA/PE + Indicadores (conformidade ponderada) + Notificações (resolutividade por processo) · GOL ≥ 75pts sem eventos graves não tratados</footer>
+</div>
+
+<!-- MODAL -->
+<div class="mo" id="mo" onclick="outsideClose(event)">
+  <div class="md">
+    <div class="mh">
+      <div class="mh-left">
+        <div class="mav" id="mAvatar"></div>
+        <div><div class="mh-title" id="mTitle"></div><div class="mh-sub" id="mSub"></div></div>
+      </div>
+      <button class="mclose" onclick="closeMo()">✕</button>
+    </div>
+    <div class="m-scores" id="mScores"></div>
+    <div class="m-panels" id="mPanels"></div>
+    <div class="mtabs" id="mTabs"></div>
+    <div class="mbody" id="mBody"><div class="loading">Carregando...</div></div>
+  </div>
+</div>
+
+<!-- ── DATA BLOCK (API padrão: Excel → Python → HTML) ── -->
+<script id="data-block">
+const RESP = """ + resp_json + """;
+const DIR  = """ + dir_json  + """;
+</script>
+<!-- ── END DATA BLOCK ── -->
 
 <script>
-
-function renderDashboard(){
-
-    const grid = document.getElementById(
-        'main-grid'
-    )
-
-    grid.innerHTML = ''
-
-    const busca = document
-        .getElementById(
-            'search-input'
-        )
-        .value
-        .toLowerCase()
-
-    let soma = 0
-    let total = 0
-    let criticos = 0
-
-    Object.entries(
-        dadosProcessados
-    ).forEach(
-
-        ([nome,dados])=>{
-
-            const texto = (
-
-                nome + ' ' +
-                dados.gestor + ' ' +
-                dados.risco.tendencia
-
-            ).toLowerCase()
-
-            if(
-                busca &&
-                !texto.includes(busca)
-            ){
-
-                return
-
-            }
-
-            total++
-
-            soma += dados.score_geral
-
-            const pendentes = dados.notificacoes.filter(nf=>{
-
-                const st = n(
-
-                    nf.Situação ||
-                    nf.Situacao ||
-                    nf.Status
-
-                )
-
-                return (
-
-                    st.includes('nova') ||
-                    st.includes('pendente')
-
-                )
-
-            }).length
-
-            criticos += pendentes
-
-            const card = document.createElement(
-                'div'
-            )
-
-            card.className = (
-
-                'card ' +
-                statusClasse(
-                    dados.score_geral
-                )
-
-            )
-
-            card.innerHTML = `
-
-                <div class="c-header">
-
-                    <div>
-
-                        <div class="c-title">
-
-                            ${nome}
-
-                        </div>
-
-                        <div class="c-sub">
-
-                            Gestor:
-                            ${dados.gestor}
-
-                        </div>
-
-                    </div>
-
-                    <div class="score-box">
-
-                        <div
-                            class="v"
-                            style="
-                                color:${corScore(
-                                    dados.score_geral
-                                )}
-                            "
-                        >
-
-                            ${formatarNumero(
-                                dados.score_geral
-                            )}%
-
-                        </div>
-
-                        <div class="l">
-
-                            Score
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                <div class="stats">
-
-                    <div class="stat">
-
-                        <div class="lbl">
-
-                            Ações ONA
-
-                        </div>
-
-                        <div class="val">
-
-                            ${dados.acoes.length}
-
-                        </div>
-
-                    </div>
-
-                    <div class="stat">
-
-                        <div class="lbl">
-
-                            Score ONA
-
-                        </div>
-
-                        <div class="val">
-
-                            ${formatarNumero(
-                                dados.performance.acoes
-                            )}%
-
-                        </div>
-
-                    </div>
-
-                    <div class="stat">
-
-                        <div class="lbl">
-
-                            Indicadores
-
-                        </div>
-
-                        <div class="val">
-
-                            ${dados.indicadores.length}
-
-                        </div>
-
-                    </div>
-
-                    <div class="stat">
-
-                        <div class="lbl">
-
-                            Score Indicadores
-
-                        </div>
-
-                        <div class="val">
-
-                            ${formatarNumero(
-                                dados.performance.indicadores
-                            )}%
-
-                        </div>
-
-                    </div>
-
-                    <div class="stat">
-
-                        <div class="lbl">
-
-                            Notificações
-
-                        </div>
-
-                        <div class="val">
-
-                            ${dados.notificacoes.length}
-
-                        </div>
-
-                    </div>
-
-                    <div class="stat">
-
-                        <div class="lbl">
-
-                            Resolutividade
-
-                        </div>
-
-                        <div
-                            class="val"
-                            style="
-                                color:${corScore(
-                                    dados.performance.resolutividade
-                                )}
-                            "
-                        >
-
-                            ${formatarNumero(
-                                dados.performance.resolutividade
-                            )}%
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            `
-
-            card.onclick = ()=>{
-
-                abrirDetalhes(
-                    nome,
-                    dados
-                )
-
-            }
-
-            grid.appendChild(
-                card
-            )
-
-        }
-
-    )
-
-    const media = (
-
-        total > 0
-
-        ?
-
-        soma / total
-
-        :
-
-        0
-
-    )
-
-    document.getElementById(
-        'kpi-score'
-    ).innerText = (
-        formatarNumero(media) + '%'
-    )
-
-    document.getElementById(
-        'kpi-score'
-    ).style.color = corScore(
-        media
-    )
-
-    document.getElementById(
-        'kpi-crits'
-    ).innerText = criticos
-
+const DET_B64 = '""" + det_b64 + """';
+let DET = null, curTeam='geral', curView='rank', curResp=null, curTab='a_all';
+
+const TEAMS = {
+  geral:{dir:'Diretoria Geral',   key:'geral', accent:'#58A6FF'},
+  tec:  {dir:'Diretoria Técnica', key:'tec',   accent:'#4CAF50'},
+  adm:  {dir:'Dir. Administrativa/Financeira', key:'adm', accent:'#F0883E'},
+};
+const RESOLVIDAS = new Set(['Finalizada','Encerrada','Concluída','Aprovada','Não efetiva']);
+const EM_AND     = new Set(['Aceita','Analisada','Revisão','Em Análise','Em Aceite','Efetiva','Convertida','Em Andamento']);
+const SEV_COLOR  = {'Evento Catastrófico':'#FF6B6B','Evento Adverso Grave':'#F85149',
+                    'Evento Adverso Moderado':'#F0883E','Evento Adverso Leve':'#98C379',
+                    'Circunstância de Risco':'#8B949E','Evento sem Dano':'#656D76','Quase Evento':'#656D76'};
+
+function sc(p){
+  if(p==null)return'#656D76';
+  if(p>=80)return'#3FB950';if(p>=60)return'#58A6FF';
+  if(p>=40)return'#F0883E';return'#F85149';
+}
+function avBg(p){
+  if(p>=80)return{bg:'#1A3A22',fg:'#3FB950'};
+  if(p>=60)return{bg:'#1A2D4A',fg:'#58A6FF'};
+  if(p>=40)return{bg:'#3A2210',fg:'#F0883E'};
+  return{bg:'#3A1A1A',fg:'#F85149'};
+}
+function init(n){return n.split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('').toUpperCase();}
+function isGol(d){return d.score>=75&&(d.notificacoes.nao_tratadas_graves||0)===0&&d.acoes.atrasada===0;}
+function pct(v,t){return t>0?Math.round(v/t*100):0;}
+function prazoClass(p){
+  const m={'CONCLUÍDA NO PRAZO':'sc-concl','CONCLUÍDA COM ATRASO':'sc-concl-at',
+           'EM ANDAMENTO':'sc-and','ATRASADA':'sc-at','NÃO INICIADA':'sc-ni',
+           'FUTURA':'sc-fut','SEM DATA':'sc-sd'};return m[p]||'sc-sd';
+}
+function sitClass(s){if(RESOLVIDAS.has(s))return'sit-r';if(EM_AND.has(s))return'sit-a';return'sit-n';}
+
+function setTeam(t){
+  curTeam=t;
+  ['geral','tec','adm'].forEach(k=>{
+    const el=document.getElementById('tt-'+k);
+    el.className='ttab '+k+(k===t?' active':'');
+  });
+  render();
+}
+function setView(v){
+  curView=v;
+  document.getElementById('vb-rank').classList.toggle('active',v==='rank');
+  document.getElementById('vb-cards').classList.toggle('active',v==='cards');
+  render();
+}
+function filteredEntries(){
+  const t=TEAMS[curTeam];
+  const q=(document.getElementById('search').value||'').toLowerCase().trim();
+  const f=document.getElementById('filt').value;
+  let entries=Object.entries(RESP).filter(([,d])=>d.diretoria===t.dir);
+  if(q)entries=entries.filter(([n])=>n.toLowerCase().includes(q));
+  if(f==='at')   entries=entries.filter(([,d])=>d.acoes.atrasada>0);
+  else if(f==='ni')       entries=entries.filter(([,d])=>d.acoes.nao_iniciada>0);
+  else if(f==='ind_fora') entries=entries.filter(([,d]=>d.indicadores.ind_prob>0));
+  else if(f==='notif_ab') entries=entries.filter(([,d])=>(d.notificacoes.andamento||0)+(d.notificacoes.novas||0)>0);
+  else if(f==='sev')      entries=entries.filter(([,d])=>(d.notificacoes.ev_cat||0)+(d.notificacoes.ev_grave||0)>0);
+  return entries;
 }
 
-function abrirDetalhes(
-    nome,
-    dados
-){
+function render(){
+  const t=TEAMS[curTeam]; const ds=DIR[t.dir]||{};
+  // Update team scores
+  Object.entries(TEAMS).forEach(([k,tv])=>{
+    const d=DIR[tv.dir]||{};
+    document.getElementById('ts-'+k).textContent=(d.team_score||0).toFixed(1);
+    document.getElementById('tsub-'+k).textContent=`${d.responsaveis||0} resp · Score composto`;
+    document.getElementById('tb-'+k).textContent=({geral:'GERAL',tec:'TÉCNICO',adm:'GESTÃO'})[k];
+  });
+  const entries=filteredEntries();
+  const a=ds,i=ds.ind||{},n=ds.notif||{};
+  const a_pct_c=a.acoes_total>0?pct((a.acoes_concl_prazo||0)+(a.acoes_concl_atraso||0),a.acoes_total):0;
+  const a_pct_at=a.acoes_total>0?pct(a.acoes_atrasadas||0,a.acoes_total):0;
+  const a_pct_nd=a.acoes_total>0?pct(a.acoes_andamento||0,a.acoes_total):0;
+  const a_pct_ni=a.acoes_total>0?pct(a.acoes_nao_ini||0,a.acoes_total):0;
 
-    document.getElementById(
-        'modal-title'
-    ).innerText = nome
+  document.getElementById('panel-grid').innerHTML=`
+    <div class="panel">
+      <div class="panel-title"><span class="panel-icon">&#128203;</span>Ações ONA / Estratégicas</div>
+      <div class="stat-row"><span class="stat-key">Progresso geral</span><div class="stat-bar"><div class="stat-fill" style="width:${a.acoes_prog||0}%;background:${sc(a.acoes_prog||0)}"></div></div><span class="stat-val" style="color:${sc(a.acoes_prog||0)}">${(a.acoes_prog||0).toFixed(1)}%</span></div>
+      <div class="stat-row"><span class="stat-key">✓ Concluídas</span><div class="stat-bar"><div class="stat-fill" style="width:${a_pct_c}%;background:#3FB950"></div></div><span class="stat-val" style="color:#3FB950">${(a.acoes_concl_prazo||0)+(a.acoes_concl_atraso||0)} <span style="color:#656D76;font-size:9px">(${a_pct_c}%)</span></span></div>
+      <div class="stat-row"><span class="stat-key">▲ Em andamento</span><div class="stat-bar"><div class="stat-fill" style="width:${a_pct_nd}%;background:#58A6FF"></div></div><span class="stat-val" style="color:#58A6FF">${a.acoes_andamento||0} <span style="color:#656D76;font-size:9px">(${a_pct_nd}%)</span></span></div>
+      <div class="stat-row"><span class="stat-key">⚠ Atrasadas</span><div class="stat-bar"><div class="stat-fill" style="width:${a_pct_at}%;background:#F85149"></div></div><span class="stat-val" style="color:#F85149">${a.acoes_atrasadas||0} <span style="color:#656D76;font-size:9px">(${a_pct_at}%)</span></span></div>
+      <div class="stat-row"><span class="stat-key">● Não iniciadas</span><div class="stat-bar"><div class="stat-fill" style="width:${a_pct_ni}%;background:#656D76"></div></div><span class="stat-val" style="color:#8B949E">${a.acoes_nao_ini||0} <span style="color:#656D76;font-size:9px">(${a_pct_ni}%)</span></span></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><span class="panel-icon">&#128200;</span>Indicadores</div>
+      <div class="stat-row"><span class="stat-key">Conformidade</span><div class="stat-bar"><div class="stat-fill" style="width:${i.conformidade||0}%;background:${sc(i.conformidade||0)}"></div></div><span class="stat-val" style="color:${sc(i.conformidade||0)}">${i.conformidade!=null?i.conformidade+'%':'—'}</span></div>
+      <div class="stat-row"><span class="stat-key">Conf. ponderada</span><div class="stat-bar"><div class="stat-fill" style="width:${i.conformidade_pond||0}%;background:${sc(i.conformidade_pond||0)}"></div></div><span class="stat-val" style="color:${sc(i.conformidade_pond||0)}">${i.conformidade_pond!=null?i.conformidade_pond+'%':'—'}</span></div>
+      <div class="stat-row"><span class="stat-key">Alimentação ok</span><div class="stat-bar"><div class="stat-fill" style="width:${i.alim_pct||0}%;background:#58A6FF"></div></div><span class="stat-val" style="color:#58A6FF">${i.alim_pct!=null?i.alim_pct+'%':'—'}</span></div>
+      <div class="stat-row"><span class="stat-key">Análise ok</span><div class="stat-bar"><div class="stat-fill" style="width:${i.anal_pct||0}%;background:#58A6FF"></div></div><span class="stat-val" style="color:#58A6FF">${i.anal_pct!=null?i.anal_pct+'%':'—'}</span></div>
+      <div class="stat-row"><span class="stat-key">Em dia / Total</span><div class="stat-bar"><div class="stat-fill" style="width:${i.inds_unicos>0?pct(i.ind_ok,i.inds_unicos):0}%;background:#3FB950"></div></div><span class="stat-val" style="color:#3FB950">${i.ind_ok||0}/${i.inds_unicos||0}</span></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><span class="panel-icon">&#128276;</span>Notificações por Processo</div>
+      <div class="stat-row"><span class="stat-key">Tx. resolução</span><div class="stat-bar"><div class="stat-fill" style="width:${n.tx_resolucao||0}%;background:${sc(n.tx_resolucao||0)}"></div></div><span class="stat-val" style="color:${sc(n.tx_resolucao||0)}">${n.tx_resolucao!=null?n.tx_resolucao+'%':'—'}</span></div>
+      <div class="stat-row"><span class="stat-key">Tx. peso/sev.</span><div class="stat-bar"><div class="stat-fill" style="width:${n.tx_resolucao_peso||0}%;background:${sc(n.tx_resolucao_peso||0)}"></div></div><span class="stat-val" style="color:${sc(n.tx_resolucao_peso||0)}">${n.tx_resolucao_peso!=null?n.tx_resolucao_peso+'%':'—'}</span></div>
+      <div class="stat-row"><span class="stat-key">Resolvidas</span><div class="stat-bar"><div class="stat-fill" style="width:${n.total>0?pct(n.resolvidas,n.total):0}%;background:#3FB950"></div></div><span class="stat-val" style="color:#3FB950">${n.resolvidas||0}</span></div>
+      <div class="stat-row"><span class="stat-key">Graves não trat.</span><div class="stat-bar"><div class="stat-fill" style="width:${Math.min((n.nao_tratadas_graves||0)*10,100)}%;background:#F85149"></div></div><span class="stat-val" style="color:#F85149">${n.nao_tratadas_graves||0}</span></div>
+      <div class="stat-row"><span class="stat-key">Score severidade</span><div class="stat-bar"><div class="stat-fill" style="width:${Math.min((n.score_sev||0)*2,100)}%;background:#F0883E"></div></div><span class="stat-val" style="color:#F0883E">${(n.score_sev||0).toFixed(1)}</span></div>
+    </div>`;
 
-    document.getElementById(
-        'modal-subtitle'
-    ).innerText = (
+  const gols=entries.filter(([,d])=>isGol(d)).length;
+  const atrs=entries.filter(([,d])=>d.acoes.atrasada>0).length;
+  const avgScore=entries.length>0?entries.reduce((s,[,d])=>s+(d.score||0),0)/entries.length:0;
+  const indProb=entries.reduce((s,[,d])=>s+(d.indicadores.ind_prob||0),0);
+  const sevG=entries.reduce((s,[,d])=>s+(d.notificacoes.ev_cat||0)+(d.notificacoes.ev_grave||0),0);
+  document.getElementById('metrics').innerHTML=`
+    <div class="metric"><div class="metric-label">Responsáveis</div><div class="metric-val">${entries.length}</div></div>
+    <div class="metric"><div class="metric-label">Score médio</div><div class="metric-val" style="color:${sc(avgScore)}">${avgScore.toFixed(1)}</div></div>
+    <div class="metric"><div class="metric-label">GOLs &#9917;</div><div class="metric-val" style="color:#3FB950">${gols}</div></div>
+    <div class="metric"><div class="metric-label">Ações atrasadas</div><div class="metric-val" style="color:#F85149">${atrs} resp.</div></div>
+    <div class="metric"><div class="metric-label">Ind. c/ problema</div><div class="metric-val" style="color:#F85149">${indProb}</div></div>
+    <div class="metric"><div class="metric-label">Eventos graves</div><div class="metric-val" style="color:#FF6B6B">${sevG}</div></div>`;
 
-        'Gestor: ' +
-        dados.gestor
-
-    )
-
-    document.getElementById(
-        'modal-body'
-    ).innerHTML = `
-
-        <div class="detail-grid">
-
-            <div class="detail-card">
-
-                <div class="lbl">
-
-                    Score Geral
-
-                </div>
-
-                <div
-                    class="val"
-                    style="
-                        color:${corScore(
-                            dados.score_geral
-                        )}
-                    "
-                >
-
-                    ${formatarNumero(
-                        dados.score_geral
-                    )}%
-
-                </div>
-
-            </div>
-
-            <div class="detail-card">
-
-                <div class="lbl">
-
-                    Risco
-
-                </div>
-
-                <div class="val">
-
-                    ${dados.risco.nivel}
-
-                </div>
-
-            </div>
-
-            <div class="detail-card">
-
-                <div class="lbl">
-
-                    Tendência
-
-                </div>
-
-                <div class="val">
-
-                    ${dados.risco.tendencia}
-
-                </div>
-
-            </div>
-
-            <div class="detail-card">
-
-                <div class="lbl">
-
-                    Ações ONA
-
-                </div>
-
-                <div class="val">
-
-                    ${dados.acoes.length}
-
-                </div>
-
-            </div>
-
-            <div class="detail-card">
-
-                <div class="lbl">
-
-                    Indicadores
-
-                </div>
-
-                <div class="val">
-
-                    ${dados.indicadores.length}
-
-                </div>
-
-            </div>
-
-            <div class="detail-card">
-
-                <div class="lbl">
-
-                    Notificações
-
-                </div>
-
-                <div class="val">
-
-                    ${dados.notificacoes.length}
-
-                </div>
-
-            </div>
-
-        </div>
-
-    `
-
-    document.getElementById(
-        'modal'
-    ).style.display = 'flex'
+  if(curView==='rank') renderRank(entries);
+  else renderCards(entries);
 }
 
-function closeModal(){
-
-    document.getElementById(
-        'modal'
-    ).style.display = 'none'
-
+function renderRank(entries){
+  const sorted=[...entries].sort((a,b)=>b[1].score-a[1].score);
+  if(!sorted.length){document.getElementById('content').innerHTML='<div class="no-results">Nenhum resultado.</div>';return;}
+  let h=`<div class="rank-wrap">
+    <div class="rank-hd">
+      <span>#</span><span></span><span>Responsável</span>
+      <span style="text-align:center">Score</span>
+      <span style="text-align:center">Ações</span>
+      <span style="text-align:center">Indicadores</span>
+      <span style="text-align:center">Notificações</span>
+      <span style="text-align:right">Status</span>
+    </div>`;
+  sorted.forEach(([nome,d],i)=>{
+    const pos=i+1; const rc=pos===1?'p1':pos===2?'p2':pos===3?'p3':'';
+    const gol=isGol(d); const av=avBg(d.score);
+    const a=d.acoes,ind=d.indicadores,n=d.notificacoes;
+    const scoreColor=sc(d.score);
+    const aScore=d.a_score!=null?d.a_score.toFixed(0)+'%':'—';
+    const iScore=ind.conformidade_pond!=null?ind.conformidade_pond.toFixed(0)+'%':'—';
+    const nScore=n.tx_resolucao_peso!=null?n.tx_resolucao_peso.toFixed(0)+'%':'—';
+    const sevBadge=(n.ev_cat||0)>0?`<span style="color:#FF6B6B;font-size:9px;font-family:var(--mono)">&#9760;Cat:${n.ev_cat}</span>`:
+                   (n.ev_grave||0)>0?`<span style="color:#F85149;font-size:9px;font-family:var(--mono)">Grav:${n.ev_grave}</span>`:'';
+    h+=`<div class="rank-row" onclick="openMo('${nome.replace(/'/g,"\\'")}')">
+      <span class="rpos ${rc}">${pos}º</span>
+      <div class="av" style="background:${av.bg};color:${av.fg}">${init(nome)}</div>
+      <div class="rinfo" style="min-width:0">
+        <div class="rname">${nome}</div>
+        <div class="rsetor">${d.setores?d.setores[0]:'—'}</div>
+      </div>
+      <div class="score-cell">
+        <span class="score-pill" style="color:${scoreColor};border-color:${scoreColor};background:${scoreColor}22">${d.score.toFixed(1)}</span>
+      </div>
+      <div>
+        <div class="mini-bar-row"><div class="mini-bar-t"><div class="mini-bar-f" style="width:${a.prog_geral||0}%;background:${sc(a.prog_geral||0)}"></div></div><span class="mini-lbl" style="color:${sc(a.prog_geral||0)}">${aScore}</span></div>
+        <div style="font-size:9px;color:#656D76;font-family:var(--mono);margin-top:1px">${a.concl_prazo>0?`✓${a.concl_prazo} `:''}${a.atrasada>0?`<span style="color:#F85149">⚠${a.atrasada}</span> `:''}${a.nao_iniciada>0?`●${a.nao_iniciada}`:''}</div>
+      </div>
+      <div>
+        <div class="mini-bar-row"><div class="mini-bar-t"><div class="mini-bar-f" style="width:${ind.conformidade_pond||0}%;background:${sc(ind.conformidade_pond||0)}"></div></div><span class="mini-lbl" style="color:${sc(ind.conformidade_pond||0)}">${iScore}</span></div>
+        <div style="font-size:9px;color:#656D76;font-family:var(--mono);margin-top:1px">${ind.inds_unicos||0} ind · ${ind.ind_prob||0>0?`<span style="color:#F85149">${ind.ind_prob} prob</span>`:ind.ind_ok+' ok'}</div>
+      </div>
+      <div class="notif-cell">
+        <div style="color:${sc(n.tx_resolucao_peso||n.tx_resolucao||0)};font-weight:600">${nScore}</div>
+        <div style="font-size:9px;color:#656D76;font-family:var(--mono)">${n.total||0} total ${sevBadge}</div>
+      </div>
+      <div style="text-align:right">
+        <span class="gol-chip" style="${gol?'background:#1A3A22;color:#3FB950;border:1px solid #3FB950':'background:#21262D;color:#8B949E;border:1px solid #30363D'}">${gol?'⚽ GOL':'—'}</span>
+      </div>
+    </div>`;
+  });
+  h+='</div>';
+  document.getElementById('content').innerHTML=h;
 }
 
-window.onload = ()=>{
-
-    processarDados()
-
-    renderDashboard()
-
+function renderCards(entries){
+  const sorted=[...entries].sort((a,b)=>b[1].score-a[1].score);
+  if(!sorted.length){document.getElementById('content').innerHTML='<div class="no-results">Nenhum resultado.</div>';return;}
+  let h='<div class="cards-grid">';
+  sorted.forEach(([nome,d])=>{
+    const gol=isGol(d); const a=d.acoes,ind=d.indicadores,n=d.notificacoes;
+    const scoreColor=sc(d.score);
+    const aColor=sc(d.a_score); const iColor=sc(ind.conformidade_pond); const nColor=sc(n.tx_resolucao_peso);
+    h+=`<div class="card" onclick="openMo('${nome.replace(/'/g,"\\'")}')">
+      <div class="card-head">
+        <div style="min-width:0"><div class="card-name">${nome}</div><div class="card-setor">${d.setores?d.setores[0]:'—'}</div></div>
+        <span class="card-badge" style="${gol?'color:#3FB950;border-color:#3FB950;background:#1A3A22':'color:#8B949E;border-color:#30363D;background:#21262D'}">${gol?'⚽ GOL':d.score.toFixed(0)}</span>
+      </div>
+      <div class="cpr"><span class="cpl b">Score</span><div class="cbw"><div class="cbf" style="width:${d.score}%;background:${scoreColor}"></div></div><span class="cpv" style="color:${scoreColor}">${d.score.toFixed(1)}</span></div>
+      ${d.a_score!=null?`<div class="cpr"><span class="cpl">Ações</span><div class="cbw"><div class="cbf" style="width:${d.a_score}%;background:${aColor}"></div></div><span class="cpv" style="color:${aColor}">${d.a_score.toFixed(0)}%</span></div>`:''}
+      ${ind.conformidade_pond!=null?`<div class="cpr"><span class="cpl">Indicadores</span><div class="cbw"><div class="cbf" style="width:${ind.conformidade_pond}%;background:${iColor}"></div></div><span class="cpv" style="color:${iColor}">${ind.conformidade_pond.toFixed(0)}%</span></div>`:''}
+      ${n.tx_resolucao_peso!=null?`<div class="cpr"><span class="cpl">Notif.</span><div class="cbw"><div class="cbf" style="width:${n.tx_resolucao_peso}%;background:${nColor}"></div></div><span class="cpv" style="color:${nColor}">${n.tx_resolucao_peso.toFixed(0)}%</span></div>`:''}
+      <div class="card-pills">
+        ${a.concl_prazo>0?`<span class="pill" style="color:#3FB950;border-color:#3FB950;background:#1A3A22">✓ ${a.concl_prazo}</span>`:''}
+        ${a.em_andamento>0?`<span class="pill" style="color:#F0883E;border-color:#F0883E;background:#3A2210">▲ ${a.em_andamento}</span>`:''}
+        ${a.atrasada>0?`<span class="pill" style="color:#F85149;border-color:#F85149;background:#3A1A1A">⚠ ${a.atrasada}</span>`:''}
+        ${a.nao_iniciada>0?`<span class="pill" style="color:#8B949E;border-color:#30363D;background:#21262D">● ${a.nao_iniciada} NI</span>`:''}
+        ${ind.ind_prob>0?`<span class="pill" style="color:#F85149;border-color:#F85149;background:#3A1A1A">📊 ${ind.ind_prob} prob</span>`:''}
+        ${(n.ev_cat||0)+(n.ev_grave||0)>0?`<span class="pill" style="color:#FF6B6B;border-color:#FF6B6B;background:#3A1A1A">⚡ ${(n.ev_cat||0)+(n.ev_grave||0)} grave${(n.ev_cat||0)+(n.ev_grave||0)>1?'s':''}</span>`:''}
+        ${n.total>0?`<span class="pill" style="color:#8B949E;border-color:#30363D;background:#21262D">🔔 ${n.total}</span>`:''}
+      </div>
+      <div class="hint">↗ clique para detalhar</div>
+    </div>`;
+  });
+  h+='</div>';
+  document.getElementById('content').innerHTML=h;
 }
 
+async function loadDet(){
+  if(DET)return DET;
+  const bin=atob(DET_B64);const bytes=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+  const ds=new DecompressionStream('gzip');const w=ds.writable.getWriter();w.write(bytes);w.close();
+  const chunks=[];const r=ds.readable.getReader();
+  while(true){const{done,value}=await r.read();if(done)break;chunks.push(value);}
+  const tot=chunks.reduce((a,c)=>a+c.length,0);const all=new Uint8Array(tot);let off=0;
+  chunks.forEach(c=>{all.set(c,off);off+=c.length;});
+  DET=JSON.parse(new TextDecoder().decode(all));return DET;
+}
+
+async function openMo(nome){
+  curResp=nome;curTab='a_all';
+  document.getElementById('mo').classList.add('open');
+  const d=RESP[nome];
+  const av=avBg(d.score);
+  document.getElementById('mAvatar').style.background=av.bg;
+  document.getElementById('mAvatar').style.color=av.fg;
+  document.getElementById('mAvatar').textContent=init(nome);
+  document.getElementById('mTitle').textContent=nome;
+  document.getElementById('mSub').textContent=`${d.diretoria} · ${d.gerencia} · ${d.setores?d.setores.join(' | '):'—'}`;
+  buildMoScores(d);
+  buildMoPanels(d);
+  document.getElementById('mBody').innerHTML='<div class="loading">carregando detalhes...</div>';
+  const det=await loadDet();
+  renderMoTab(nome,d,det[nome]||{acoes:[],indicadores:[],notificacoes:[]},curTab);
+}
+
+function buildMoScores(d){
+  const gol=isGol(d);
+  document.getElementById('mScores').innerHTML=`
+    <div class="mscore">
+      <div class="mscore-lbl">Score Composto</div>
+      <div class="mscore-val" style="color:${sc(d.score)}">${d.score.toFixed(1)}</div>
+      <div class="mscore-sub">${gol?'⚽ GOL':'Peso: Ações 45% + Ind 35% + Notif 20%'}</div>
+      <div class="mscore-bar"><div class="mscore-bar-fill" style="width:${d.score}%;background:${sc(d.score)}"></div></div>
+    </div>
+    <div class="mscore">
+      <div class="mscore-lbl">Ações (ONA×1.5 / PE×1.2)</div>
+      <div class="mscore-val" style="color:${sc(d.a_score)}">${d.a_score!=null?d.a_score.toFixed(1):'—'}</div>
+      <div class="mscore-sub">${d.acoes.total} ações · ${d.acoes.concluidas} concluídas</div>
+      <div class="mscore-bar"><div class="mscore-bar-fill" style="width:${d.a_score||0}%;background:${sc(d.a_score)}"></div></div>
+    </div>
+    <div class="mscore">
+      <div class="mscore-lbl">Indicadores (Result×1.5 / Proc×1.2)</div>
+      <div class="mscore-val" style="color:${sc(d.i_score)}">${d.i_score!=null?d.i_score.toFixed(1):'—'}</div>
+      <div class="mscore-sub">${d.indicadores.inds_unicos||0} ind. únicos · ${d.indicadores.ind_ok||0} em dia</div>
+      <div class="mscore-bar"><div class="mscore-bar-fill" style="width:${d.i_score||0}%;background:${sc(d.i_score)}"></div></div>
+    </div>
+    <div class="mscore">
+      <div class="mscore-lbl">Notificações (por processo)</div>
+      <div class="mscore-val" style="color:${sc(d.n_score)}">${d.n_score!=null?d.n_score.toFixed(1):'—'}</div>
+      <div class="mscore-sub">${d.notificacoes.total||0} notif · ${d.notificacoes.nao_tratadas_graves||0} graves sem trat.</div>
+      <div class="mscore-bar"><div class="mscore-bar-fill" style="width:${d.n_score||0}%;background:${sc(d.n_score)}"></div></div>
+    </div>`;
+}
+
+function buildMoPanels(d){
+  const a=d.acoes,ind=d.indicadores,n=d.notificacoes;
+  document.getElementById('mPanels').innerHTML=`
+    <div class="mpanel">
+      <div class="mpanel-title">Ações</div>
+      ${[['Concl. prazo',a.concl_prazo,'#3FB950'],['Concl. atraso',a.concl_atraso,'#58A6FF'],
+         ['Em andamento',a.em_andamento,'#F0883E'],['Atrasadas',a.atrasada,'#F85149'],
+         ['Não iniciadas',a.nao_iniciada,'#8B949E'],['Futuras',a.futura,'#656D76']].map(([k,v,c])=>
+        `<div class="mpanel-stat"><span class="k">${k}</span><span class="v" style="color:${c}">${v}</span></div>`).join('')}
+      <div class="mpanel-chips" style="margin-top:6px">
+        ${Object.entries(a.prog_por_tipo||{}).map(([t,p])=>
+          `<span class="mchip" style="color:${t==='ONA'?'#D85A30':'#58A6FF'};border-color:currentColor;background:currentColor22">${t}: ${p.toFixed(0)}%</span>`).join('')}
+      </div>
+    </div>
+    <div class="mpanel">
+      <div class="mpanel-title">Indicadores</div>
+      <div class="mpanel-stat"><span class="k">Conformidade</span><span class="v" style="color:${sc(ind.conformidade)}">${ind.conformidade!=null?ind.conformidade+'%':'—'}</span></div>
+      <div class="mpanel-stat"><span class="k">Conf. ponderada</span><span class="v" style="color:${sc(ind.conformidade_pond)}">${ind.conformidade_pond!=null?ind.conformidade_pond+'%':'—'}</span></div>
+      <div class="mpanel-stat"><span class="k">Aliment. ok</span><span class="v" style="color:#58A6FF">${ind.alim_pct!=null?ind.alim_pct+'%':'—'}</span></div>
+      <div class="mpanel-stat"><span class="k">Análise ok</span><span class="v" style="color:#58A6FF">${ind.anal_pct!=null?ind.anal_pct+'%':'—'}</span></div>
+      <div class="mpanel-stat"><span class="k">Em dia / Total</span><span class="v" style="color:#3FB950">${ind.ind_ok||0} / ${ind.inds_unicos||0}</span></div>
+      <div class="mpanel-stat"><span class="k">Com problema</span><span class="v" style="color:#F85149">${ind.ind_prob||0}</span></div>
+    </div>
+    <div class="mpanel">
+      <div class="mpanel-title">Notificações</div>
+      <div class="mpanel-stat"><span class="k">Tx. resolução</span><span class="v" style="color:${sc(n.tx_resolucao)}">${n.tx_resolucao!=null?n.tx_resolucao+'%':'—'}</span></div>
+      <div class="mpanel-stat"><span class="k">Tx. peso/sev.</span><span class="v" style="color:${sc(n.tx_resolucao_peso)}">${n.tx_resolucao_peso!=null?n.tx_resolucao_peso+'%':'—'}</span></div>
+      <div class="mpanel-stat"><span class="k">Graves não trat.</span><span class="v" style="color:#F85149">${n.nao_tratadas_graves||0}</span></div>
+      <div class="mpanel-chips">
+        ${(n.ev_cat||0)>0?`<span class="mchip" style="color:#FF6B6B;border-color:#FF6B6B;background:#FF6B6B22">Catastr: ${n.ev_cat}</span>`:''}
+        ${(n.ev_grave||0)>0?`<span class="mchip" style="color:#F85149;border-color:#F85149;background:#F8514922">Grave: ${n.ev_grave}</span>`:''}
+        ${(n.ev_mod||0)>0?`<span class="mchip" style="color:#F0883E;border-color:#F0883E;background:#F0883E22">Mod: ${n.ev_mod}</span>`:''}
+        ${(n.incidentes||0)>0?`<span class="mchip" style="color:#8B949E;border-color:#30363D;background:#21262D">Inc: ${n.incidentes}</span>`:''}
+        ${(n.nao_conf||0)>0?`<span class="mchip" style="color:#8B949E;border-color:#30363D;background:#21262D">NC: ${n.nao_conf}</span>`:''}
+      </div>
+    </div>`;
+}
+
+function renderMoTab(nome,d,det,tab){
+  curTab=tab;
+  const ac=det.acoes||[],ii=det.indicadores||[],nn=det.notificacoes||[];
+  const at=ac.filter(a=>a.prazo==='ATRASADA');
+  const ni=ac.filter(a=>a.prazo==='NÃO INICIADA');
+  const em=ac.filter(a=>a.prazo==='EM ANDAMENTO');
+  const ck=ac.filter(a=>a.prazo.startsWith('CONCLUÍDA'));
+  const ind_prob=ii.filter(i=>i.status==='Fora do Prazo');
+  const notif_open=nn.filter(n=>!RESOLVIDAS.has(n.situacao));
+
+  document.getElementById('mTabs').innerHTML=`
+    <button class="mtab ${tab==='a_all'?'active':''}" onclick="switchTab('a_all')">Todas ações<span class="tcnt">${ac.length}</span></button>
+    <button class="mtab ${tab==='a_at'?'active':''}"  onclick="switchTab('a_at')">Atrasadas<span class="tcnt r">${at.length}</span></button>
+    <button class="mtab ${tab==='a_ni'?'active':''}"  onclick="switchTab('a_ni')">Não iniciadas<span class="tcnt a">${ni.length}</span></button>
+    <button class="mtab ${tab==='a_em'?'active':''}"  onclick="switchTab('a_em')">Em andamento<span class="tcnt a">${em.length}</span></button>
+    <button class="mtab ${tab==='a_ok'?'active':''}"  onclick="switchTab('a_ok')">Concluídas<span class="tcnt g">${ck.length}</span></button>
+    <button class="mtab ${tab==='ind'?'active':''}"   onclick="switchTab('ind')">Indicadores<span class="tcnt ${ind_prob.length?'r':''}">${ii.length}</span></button>
+    <button class="mtab ${tab==='notif'?'active':''}" onclick="switchTab('notif')">Notificações<span class="tcnt ${notif_open.length?'a':''}">${nn.length}</span></button>`;
+
+  let filtered=ac;
+  if(tab==='a_at')filtered=at;else if(tab==='a_ni')filtered=ni;
+  else if(tab==='a_em')filtered=em;else if(tab==='a_ok')filtered=ck;
+
+  if(tab.startsWith('a_')){
+    if(!filtered.length){document.getElementById('mBody').innerHTML='<div class="no-r">Nenhuma ação nesta categoria.</div>';return;}
+    let b=`<div class="tw"><table><thead><tr>
+      <th>Ação / Requisito</th><th>Tipo</th><th>Fim Prev.</th><th>Fim Real</th><th>Progresso</th><th>Status Prazo</th><th>Situação</th>
+    </tr></thead><tbody>`;
+    filtered.forEach(a=>{
+      const tc=a.tipo==='ONA'?'#D85A30':'#58A6FF';
+      b+=`<tr>
+        <td style="max-width:260px;word-break:break-word;color:var(--text);font-size:10px">${a.titulo}</td>
+        <td><span class="tbadge" style="color:${tc};border-color:${tc};background:${tc}22">${a.tipo}</span></td>
+        <td style="white-space:nowrap;font-family:var(--mono);font-size:10px">${a.fim_prev}</td>
+        <td style="white-space:nowrap;font-family:var(--mono);font-size:10px">${a.fim_real||'—'}</td>
+        <td><div class="pm"><div class="pmbar"><div class="pmfill" style="width:${a.prog}%;background:${sc(a.prog)}"></div></div><span style="font-size:10px;font-weight:600;font-family:var(--mono);color:${sc(a.prog)}">${a.prog.toFixed(0)}%</span></div></td>
+        <td><span class="sc ${prazoClass(a.prazo)}">${a.prazo}</span></td>
+        <td style="font-size:10px;color:var(--text2)">${a.status}</td>
+      </tr>`;
+    });
+    b+='</tbody></table></div>';
+    document.getElementById('mBody').innerHTML=b;
+  } else if(tab==='ind'){
+    if(!ii.length){document.getElementById('mBody').innerHTML='<div class="no-r">Sem indicadores vinculados.</div>';return;}
+    let b=`<div class="tw"><table><thead><tr>
+      <th>Indicador</th><th>Peso</th><th>Tipo</th><th>Status</th><th>Data</th><th>Serial</th>
+    </tr></thead><tbody>`;
+    ii.forEach(i=>{
+      const ok=i.status==='Dentro do Prazo';
+      const pesoLabel=i.peso>=1.5?'RESULTADO':i.peso>=1.2?'PROCESSO':'ESTRUTURA';
+      const pesoColor=i.peso>=1.5?'#F0883E':i.peso>=1.2?'#58A6FF':'#8B949E';
+      b+=`<tr>
+        <td style="max-width:280px;word-break:break-word;font-size:10px;color:var(--text)">${i.nome}</td>
+        <td><span class="tbadge" style="color:${pesoColor};border-color:${pesoColor};background:${pesoColor}22">×${i.peso} ${pesoLabel}</span></td>
+        <td style="font-size:10px;color:var(--text2)">${i.tipo}</td>
+        <td><span class="${ok?'ind-ok':'ind-fora'}">${ok?'✓ Em dia':'✗ Fora prazo'}</span></td>
+        <td style="font-size:10px;font-family:var(--mono);color:var(--text3)">${i.data}</td>
+        <td style="font-size:10px;font-family:var(--mono);color:var(--text3)">${i.serial}</td>
+      </tr>`;
+    });
+    b+='</tbody></table></div>';
+    document.getElementById('mBody').innerHTML=b;
+  } else if(tab==='notif'){
+    if(!nn.length){document.getElementById('mBody').innerHTML='<div class="no-r">Sem notificações vinculadas ao processo.</div>';return;}
+    let b=`<div class="tw"><table><thead><tr>
+      <th>Título</th><th>Serial</th><th>Tipo</th><th>Situação</th><th>Classificação</th><th>Processo</th><th>Data</th>
+    </tr></thead><tbody>`;
+    nn.forEach(n=>{
+      const sevColor=SEV_COLOR[n.classif]||'#8B949E';
+      b+=`<tr>
+        <td style="max-width:200px;word-break:break-word;font-size:10px;color:var(--text)">${n.titulo}</td>
+        <td style="font-size:10px;font-family:var(--mono);color:var(--text3);white-space:nowrap">${n.serial}</td>
+        <td style="font-size:10px;color:var(--text2);white-space:nowrap">${n.tipo}</td>
+        <td><span class="sit-chip ${sitClass(n.situacao)}">${n.situacao}</span></td>
+        <td>${n.classif?`<span style="font-size:9px;font-weight:600;color:${sevColor}">${n.classif}</span>`:'<span style="color:#656D76">—</span>'}</td>
+        <td style="font-size:9px;color:var(--text3)">${n.proc}</td>
+        <td style="font-size:10px;font-family:var(--mono);color:var(--text3);white-space:nowrap">${n.data}</td>
+      </tr>`;
+    });
+    b+='</tbody></table></div>';
+    document.getElementById('mBody').innerHTML=b;
+  }
+}
+
+function switchTab(t){if(!curResp||!DET)return;renderMoTab(curResp,RESP[curResp],DET[curResp]||{acoes:[],indicadores:[],notificacoes:[]},t);}
+function closeMo(){document.getElementById('mo').classList.remove('open');curResp=null;}
+function outsideClose(e){if(e.target===document.getElementById('mo'))closeMo();}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMo();});
+render();
 </script>
-
 </body>
 </html>
