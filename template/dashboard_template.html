@@ -275,7 +275,7 @@ footer{text-align:center;font-size:10px;color:var(--text3);padding:16px 24px;
 <!-- TOPBAR -->
 <div class="topbar">
   <div class="logo-area">
-    <img class="logo-img" src="data:image/png;base64,""" + logo_b64 + """" alt="HGP">
+    <div class="logo-img" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--hgp-green)">HGP</div>
     <div>
       <div class="logo-title">Dashboard Qualidade</div>
       <div class="logo-sub">HGP · Sistema de Gestão</div>
@@ -371,13 +371,13 @@ footer{text-align:center;font-size:10px;color:var(--text3);padding:16px 24px;
 
 <!-- ── DATA BLOCK (API padrão: Excel → Python → HTML) ── -->
 <script id="data-block">
-const RESP = """ + resp_json + """;
-const DIR  = """ + dir_json  + """;
+const RESP = {};
+const DIR  = {};
 </script>
 <!-- ── END DATA BLOCK ── -->
 
 <script>
-const DET_B64 = '""" + det_b64 + """';
+const DET_B64 = '';
 let DET = null, curTeam='geral', curView='rank', curResp=null, curTab='a_all';
 
 const TEAMS = {
@@ -387,9 +387,159 @@ const TEAMS = {
 };
 const RESOLVIDAS = new Set(['Finalizada','Encerrada','Concluída','Aprovada','Não efetiva']);
 const EM_AND     = new Set(['Aceita','Analisada','Revisão','Em Análise','Em Aceite','Efetiva','Convertida','Em Andamento']);
+
 const SEV_COLOR  = {'Evento Catastrófico':'#FF6B6B','Evento Adverso Grave':'#F85149',
                     'Evento Adverso Moderado':'#F0883E','Evento Adverso Leve':'#98C379',
                     'Circunstância de Risco':'#8B949E','Evento sem Dano':'#656D76','Quase Evento':'#656D76'};
+
+function num(v, def=0){
+  const n = Number(v);
+  return Number.isFinite(n) ? n : def;
+}
+
+function normalizeResp(raw){
+  const out = {};
+  Object.entries(raw || {}).forEach(([nome,d])=>{
+    d = d || {};
+    const perf = d.performance || {};
+    const risco = d.risco || {};
+    const ac = d.acoes || {};
+    const ind = d.indicadores || {};
+    const nf = d.notificacoes || {};
+
+    const aScore = num(d.a_score ?? perf.acoes ?? ac.prog_geral ?? 0);
+    const iScore = num(d.i_score ?? perf.indicadores ?? ind.conformidade_pond ?? ind.conformidade ?? 0);
+    const nScore = num(d.n_score ?? perf.resolutividade ?? nf.resolutividade ?? nf.tx_resolucao_peso ?? nf.tx_resolucao ?? 100);
+    const score = num(d.score ?? d.score_geral ?? ((aScore*0.45)+(iScore*0.35)+(nScore*0.20)));
+
+    out[nome] = {
+      ...d,
+      score: score,
+      a_score: aScore,
+      i_score: iScore,
+      n_score: nScore,
+      diretoria: d.diretoria || 'Diretoria Geral',
+      gerencia: d.gerencia || risco.nivel || '—',
+      setores: Array.isArray(d.setores) ? d.setores : [nome],
+      risco: {
+        nivel: risco.nivel || (score >= 80 ? 'BAIXO' : score >= 60 ? 'MODERADO' : 'ALTO'),
+        tendencia: risco.tendencia || (score >= 80 ? 'POSITIVA' : score >= 60 ? 'ATENÇÃO' : 'CRÍTICA')
+      },
+      acoes: {
+        total: num(ac.total, 0),
+        prog_geral: num(ac.prog_geral ?? aScore, 0),
+        prog_por_tipo: ac.prog_por_tipo || {},
+        concl_prazo: num(ac.concl_prazo ?? ac.concluidas, 0),
+        concl_atraso: num(ac.concl_atraso, 0),
+        em_andamento: num(ac.em_andamento, 0),
+        atrasada: num(ac.atrasada, 0),
+        nao_iniciada: num(ac.nao_iniciada, 0),
+        futura: num(ac.futura, 0),
+        concluidas: num(ac.concluidas ?? ac.concl_prazo, 0)
+      },
+      indicadores: {
+        total_reg: num(ind.total_reg ?? ind.total, 0),
+        inds_unicos: num(ind.inds_unicos ?? ind.total, 0),
+        alim_ok: num(ind.alim_ok, 0),
+        alim_atraso: num(ind.alim_atraso, 0),
+        alim_pct: ind.alim_pct ?? null,
+        anal_ok: num(ind.anal_ok, 0),
+        anal_atraso: num(ind.anal_atraso, 0),
+        anal_pct: ind.anal_pct ?? null,
+        ind_ok: num(ind.ind_ok ?? ind.dentro, 0),
+        ind_prob: num(ind.ind_prob ?? ind.fora, 0),
+        conformidade: ind.conformidade ?? iScore,
+        conformidade_pond: ind.conformidade_pond ?? iScore,
+        dentro: num(ind.dentro, 0),
+        fora: num(ind.fora, 0)
+      },
+      notificacoes: {
+        total: num(nf.total, 0),
+        resolvidas: num(nf.resolvidas ?? nf.finalizadas, 0),
+        andamento: num(nf.andamento, 0),
+        novas: num(nf.novas, 0),
+        tx_resolucao: nf.tx_resolucao ?? nf.resolutividade ?? nScore,
+        tx_resolucao_peso: nf.tx_resolucao_peso ?? nf.resolutividade ?? nScore,
+        incidentes: num(nf.incidentes ?? nf.incidentes_graves, 0),
+        nao_conf: num(nf.nao_conf ?? nf.nc_criticas, 0),
+        ouvidoria: num(nf.ouvidoria, 0),
+        conflitos: num(nf.conflitos, 0),
+        tratativas: num(nf.tratativas, 0),
+        ev_cat: num(nf.ev_cat, 0),
+        ev_grave: num(nf.ev_grave ?? nf.incidentes_graves, 0),
+        ev_mod: num(nf.ev_mod, 0),
+        ev_leve: num(nf.ev_leve, 0),
+        circ_risco: num(nf.circ_risco, 0),
+        sem_dano: num(nf.sem_dano, 0),
+        nao_tratadas_graves: num(nf.nao_tratadas_graves, 0),
+        score_sev: num(nf.score_sev, 0)
+      }
+    };
+  });
+  return out;
+}
+
+const DATA = normalizeResp(RESP);
+
+function buildDir(data){
+  const base = {};
+  Object.values(TEAMS).forEach(t=>{
+    base[t.dir] = {
+      responsaveis:0, team_score:0,
+      acoes_total:0, acoes_prog:0, acoes_concl_prazo:0, acoes_concl_atraso:0,
+      acoes_andamento:0, acoes_atrasadas:0, acoes_nao_ini:0, acoes_futura:0,
+      ind:{total_reg:0, inds_unicos:0, ind_ok:0, ind_prob:0, conformidade:0, conformidade_pond:0, alim_pct:null, anal_pct:null},
+      notif:{total:0, resolvidas:0, andamento:0, novas:0, tx_resolucao:0, tx_resolucao_peso:0, nao_tratadas_graves:0, score_sev:0}
+    };
+  });
+
+  Object.values(data).forEach(d=>{
+    const dir = d.diretoria || 'Diretoria Geral';
+    if(!base[dir]) base[dir] = JSON.parse(JSON.stringify(base['Diretoria Geral']));
+    const b = base[dir];
+    b.responsaveis += 1;
+    b.team_score += d.score || 0;
+    b.acoes_total += d.acoes.total || 0;
+    b.acoes_prog += d.a_score || 0;
+    b.acoes_concl_prazo += d.acoes.concl_prazo || 0;
+    b.acoes_concl_atraso += d.acoes.concl_atraso || 0;
+    b.acoes_andamento += d.acoes.em_andamento || 0;
+    b.acoes_atrasadas += d.acoes.atrasada || 0;
+    b.acoes_nao_ini += d.acoes.nao_iniciada || 0;
+    b.acoes_futura += d.acoes.futura || 0;
+
+    b.ind.total_reg += d.indicadores.total_reg || 0;
+    b.ind.inds_unicos += d.indicadores.inds_unicos || 0;
+    b.ind.ind_ok += d.indicadores.ind_ok || 0;
+    b.ind.ind_prob += d.indicadores.ind_prob || 0;
+    b.ind.conformidade += d.i_score || 0;
+    b.ind.conformidade_pond += d.indicadores.conformidade_pond || 0;
+
+    b.notif.total += d.notificacoes.total || 0;
+    b.notif.resolvidas += d.notificacoes.resolvidas || 0;
+    b.notif.andamento += d.notificacoes.andamento || 0;
+    b.notif.novas += d.notificacoes.novas || 0;
+    b.notif.nao_tratadas_graves += d.notificacoes.nao_tratadas_graves || 0;
+    b.notif.score_sev += d.notificacoes.score_sev || 0;
+    b.notif.tx_resolucao += d.notificacoes.tx_resolucao || 0;
+    b.notif.tx_resolucao_peso += d.notificacoes.tx_resolucao_peso || 0;
+  });
+
+  Object.values(base).forEach(b=>{
+    if(b.responsaveis > 0){
+      b.team_score = b.team_score / b.responsaveis;
+      b.acoes_prog = b.acoes_prog / b.responsaveis;
+      b.ind.conformidade = b.ind.conformidade / b.responsaveis;
+      b.ind.conformidade_pond = b.ind.conformidade_pond / b.responsaveis;
+      b.notif.tx_resolucao = b.notif.tx_resolucao / b.responsaveis;
+      b.notif.tx_resolucao_peso = b.notif.tx_resolucao_peso / b.responsaveis;
+    }
+  });
+
+  return base;
+}
+
+const DIR_SAFE = Object.keys(DIR || {}).length ? DIR : buildDir(DATA);
 
 function sc(p){
   if(p==null)return'#656D76';
@@ -430,21 +580,22 @@ function filteredEntries(){
   const t=TEAMS[curTeam];
   const q=(document.getElementById('search').value||'').toLowerCase().trim();
   const f=document.getElementById('filt').value;
-  let entries=Object.entries(RESP).filter(([,d])=>d.diretoria===t.dir);
+  let entries=Object.entries(DATA);
+  if(curTeam !== 'geral') entries = entries.filter(([,d])=>d.diretoria===t.dir);
   if(q)entries=entries.filter(([n])=>n.toLowerCase().includes(q));
   if(f==='at')   entries=entries.filter(([,d])=>d.acoes.atrasada>0);
   else if(f==='ni')       entries=entries.filter(([,d])=>d.acoes.nao_iniciada>0);
-  else if(f==='ind_fora') entries=entries.filter(([,d]=>d.indicadores.ind_prob>0));
+  else if(f==='ind_fora') entries=entries.filter(([,d])=>d.indicadores.ind_prob>0);
   else if(f==='notif_ab') entries=entries.filter(([,d])=>(d.notificacoes.andamento||0)+(d.notificacoes.novas||0)>0);
   else if(f==='sev')      entries=entries.filter(([,d])=>(d.notificacoes.ev_cat||0)+(d.notificacoes.ev_grave||0)>0);
   return entries;
 }
 
 function render(){
-  const t=TEAMS[curTeam]; const ds=DIR[t.dir]||{};
+  const t=TEAMS[curTeam]; const ds=DIR_SAFE[t.dir]||{};
   // Update team scores
   Object.entries(TEAMS).forEach(([k,tv])=>{
-    const d=DIR[tv.dir]||{};
+    const d=DIR_SAFE[tv.dir]||{};
     document.getElementById('ts-'+k).textContent=(d.team_score||0).toFixed(1);
     document.getElementById('tsub-'+k).textContent=`${d.responsaveis||0} resp · Score composto`;
     document.getElementById('tb-'+k).textContent=({geral:'GERAL',tec:'TÉCNICO',adm:'GESTÃO'})[k];
@@ -587,6 +738,7 @@ function renderCards(entries){
 
 async function loadDet(){
   if(DET)return DET;
+  if(!DET_B64){ DET={}; return DET; }
   const bin=atob(DET_B64);const bytes=new Uint8Array(bin.length);
   for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
   const ds=new DecompressionStream('gzip');const w=ds.writable.getWriter();w.write(bytes);w.close();
@@ -600,7 +752,7 @@ async function loadDet(){
 async function openMo(nome){
   curResp=nome;curTab='a_all';
   document.getElementById('mo').classList.add('open');
-  const d=RESP[nome];
+  const d=DATA[nome];
   const av=avBg(d.score);
   document.getElementById('mAvatar').style.background=av.bg;
   document.getElementById('mAvatar').style.color=av.fg;
@@ -765,7 +917,7 @@ function renderMoTab(nome,d,det,tab){
   }
 }
 
-function switchTab(t){if(!curResp||!DET)return;renderMoTab(curResp,RESP[curResp],DET[curResp]||{acoes:[],indicadores:[],notificacoes:[]},t);}
+function switchTab(t){if(!curResp||!DET)return;renderMoTab(curResp,DATA[curResp],DET[curResp]||{acoes:[],indicadores:[],notificacoes:[]},t);}
 function closeMo(){document.getElementById('mo').classList.remove('open');curResp=null;}
 function outsideClose(e){if(e.target===document.getElementById('mo'))closeMo();}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMo();});
