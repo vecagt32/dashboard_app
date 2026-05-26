@@ -20,6 +20,46 @@
   --font:'Sora',sans-serif; --mono:'JetBrains Mono',monospace;
   --shadow:0 4px 24px rgba(0,0,0,.4);
 }
+
+body.light{
+  --bg:#F4F7FA;
+  --bg2:#FFFFFF;
+  --bg3:#EEF2F7;
+  --bg4:#E3E8EF;
+  --border:#D0D7E2;
+  --border2:#B8C2D1;
+  --text:#172033;
+  --text2:#4B5870;
+  --text3:#6B7280;
+  --green:#16803A;
+  --green-dim:#DDFBE8;
+  --green-t:#16A34A22;
+  --blue:#2563EB;
+  --blue-dim:#DBEAFE;
+  --blue-t:#2563EB22;
+  --amber:#D97706;
+  --amber-dim:#FEF3C7;
+  --amber-t:#D9770622;
+  --red:#DC2626;
+  --red-dim:#FEE2E2;
+  --red-t:#DC262622;
+  --purple:#7C3AED;
+  --purple-dim:#EDE9FE;
+  --hgp-green:#16803A;
+  --hgp-teal:#0F766E;
+  --hgp-dots:#22C55E;
+  --shadow:0 4px 24px rgba(15,23,42,.12);
+}
+body.light .topbar{box-shadow:0 1px 8px rgba(15,23,42,.06)}
+body.light .ttab,
+body.light .panel,
+body.light .metric,
+body.light .rank-wrap,
+body.light .card,
+body.light .md,
+body.light .mscore,
+body.light .mpanel{box-shadow:0 1px 10px rgba(15,23,42,.05)}
+body.light .mo{background:rgba(15,23,42,.35)}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 
@@ -282,6 +322,12 @@ footer{text-align:center;font-size:10px;color:var(--text3);padding:16px 24px;
     </div>
   </div>
   <div class="topbar-right">
+      <button
+        id="theme-toggle"
+        onclick="toggleTheme()"
+        title="Alternar tema claro/escuro"
+        style="background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:11px;font-family:var(--mono);cursor:pointer;white-space:nowrap"
+      >🌙 Escuro</button>
     <div class="controls" style="margin:0">
       <span class="ctrl-label">Buscar</span>
       <input class="inp" id="search" type="text" placeholder="Responsável..." oninput="render()">
@@ -921,6 +967,25 @@ function switchTab(t){if(!curResp||!DET)return;renderMoTab(curResp,DATA[curResp]
 function closeMo(){document.getElementById('mo').classList.remove('open');curResp=null;}
 function outsideClose(e){if(e.target===document.getElementById('mo'))closeMo();}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMo();});
+
+function aplicarTema(){
+  const tema = localStorage.getItem('tema-dashboard-hgp') || 'dark';
+  const btn = document.getElementById('theme-toggle');
+  if(tema === 'light'){
+    document.body.classList.add('light');
+    if(btn) btn.textContent = '☀️ Claro';
+  } else {
+    document.body.classList.remove('light');
+    if(btn) btn.textContent = '🌙 Escuro';
+  }
+}
+function toggleTheme(){
+  const atual = localStorage.getItem('tema-dashboard-hgp') || 'dark';
+  localStorage.setItem('tema-dashboard-hgp', atual === 'dark' ? 'light' : 'dark');
+  aplicarTema();
+}
+
+aplicarTema();
 render();
 </script>
 </body>
