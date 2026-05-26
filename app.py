@@ -59,9 +59,9 @@ def processar_responsaveis(
 # ATUALIZAR HTML
 # =====================================================
 
-def atualizar_html(template_html, dados_json):
+def atualizar_html(dashboard_template.html, dados_json):
 
-    with open(template_html, 'r', encoding='utf-8') as f:
+    with open(dashboard_template.html, 'r', encoding='utf-8') as f:
 
         html = f.read()
 
