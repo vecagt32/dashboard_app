@@ -1,11 +1,51 @@
 import streamlit as st
+import pandas as pd
 import json
 import re
 
-def processar_responsaveis(acoes, indicadores, notificacoes):
+from pathlib import Path
+from datetime import datetime
+
+
+# =====================================================
+# CONFIG
+# =====================================================
+
+TEMPLATE_HTML = 'template.html'
+OUTPUT_FOLDER = 'outputs'
+
+Path(OUTPUT_FOLDER).mkdir(exist_ok=True)
+
+
+# =====================================================
+# LEITURA EXCEL
+# =====================================================
+
+def carregar_excel(arquivo):
+
+    df = pd.read_excel(arquivo)
+
+    # exemplo simples
+    acoes = df
+    indicadores = df
+    notificacoes = df
+
+    return acoes, indicadores, notificacoes
+
+
+# =====================================================
+# PROCESSAMENTO
+# =====================================================
+
+def processar_responsaveis(
+    acoes,
+    indicadores,
+    notificacoes
+):
 
     notif_abertas = len(notificacoes)
-    tx_resolucao = 85  # exemplo
+
+    tx_resolucao = 85
 
     responsaveis = {
         'andamento': int(notif_abertas),
@@ -15,9 +55,14 @@ def processar_responsaveis(acoes, indicadores, notificacoes):
     return responsaveis
 
 
+# =====================================================
+# ATUALIZAR HTML
+# =====================================================
+
 def atualizar_html(template_html, dados_json):
 
     with open(template_html, 'r', encoding='utf-8') as f:
+
         html = f.read()
 
     novo_bloco = (
@@ -58,7 +103,9 @@ if arquivo:
 
     with st.spinner('Processando dados...'):
 
-        acoes, indicadores, notificacoes = carregar_excel(arquivo)
+        acoes, indicadores, notificacoes = carregar_excel(
+            arquivo
+        )
 
         dados = processar_responsaveis(
             acoes,
@@ -75,9 +122,16 @@ if arquivo:
             f'dashboard_{datetime.now().strftime("%Y_%m_%d_%H_%M")}.html'
         )
 
-        caminho_saida = Path(OUTPUT_FOLDER) / nome_saida
+        caminho_saida = (
+            Path(OUTPUT_FOLDER) / nome_saida
+        )
 
-        with open(caminho_saida, 'w', encoding='utf-8') as f:
+        with open(
+            caminho_saida,
+            'w',
+            encoding='utf-8'
+        ) as f:
+
             f.write(html_final)
 
     st.success('Dashboard gerado com sucesso.')
@@ -91,7 +145,22 @@ if arquivo:
 
     st.subheader('Resumo da Geração')
 
-    st.metric('Responsáveis', len(dados))
-    st.metric('Ações', len(acoes))
-    st.metric('Indicadores', len(indicadores))
-    st.metric('Notificações', len(notificacoes))
+    st.metric(
+        'Responsáveis',
+        len(dados)
+    )
+
+    st.metric(
+        'Ações',
+        len(acoes)
+    )
+
+    st.metric(
+        'Indicadores',
+        len(indicadores)
+    )
+
+    st.metric(
+        'Notificações',
+        len(notificacoes)
+    )
