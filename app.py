@@ -125,7 +125,7 @@ def data_valida(valor):
     try:
         if pd.isna(valor):
             return None
-        return pd.to_datetime(valor, errors="coerce")
+        return pd.to_datetime(valor, errors="coerce", dayfirst=True)
     except Exception:
         return None
 
@@ -589,36 +589,53 @@ def processar_indicadores(indicadores, resultado, detalhes, mapa_org):
 # =====================================================
 
 def processar_notificacoes(notificacoes, resultado, detalhes, mapa_org):
+    """
+    Regra oficial:
+    - Notificações são vinculadas SOMENTE pelo campo "Processo Notificado".
+    - O campo "Responsável" da aba NOTIFICAÇÕES não é usado para atribuição.
+    - Quando o Processo Notificado existe no Organograma, a notificação entra para o
+      responsável do setor/processo mapeado no Organograma.
+    - Quando o processo não existe no Organograma, a notificação fica em um grupo
+      técnico chamado "PROCESSO NÃO MAPEADO: <processo>", evitando atribuição indevida.
+    """
+
     if notificacoes.empty:
         return
 
     col_titulo = obter_coluna(notificacoes, ["Titulo", "Título"], False)
     col_serial = obter_coluna(notificacoes, ["Serial", "ID"], False)
-    col_processo = obter_coluna(notificacoes, ["Processo Notificado", "Processo", "Setor"], False)
-    col_resp = obter_coluna(notificacoes, ["Responsável", "Responsavel"], False)
+    col_processo = obter_coluna(notificacoes, ["Processo Notificado"], False)
     col_situacao = obter_coluna(notificacoes, ["Situação", "Situacao", "Status"], False)
     col_tipo = obter_coluna(notificacoes, ["Tipo"], False)
     col_classif = obter_coluna(notificacoes, ["Classificação Incidente", "Classificacao Incidente", "Classificação", "Classificacao"], False)
     col_data = obter_coluna(notificacoes, ["Data", "Data da Notificação", "Data da Notificacao"], False)
 
+    if not col_processo:
+        raise KeyError(
+            'A aba NOTIFICAÇÕES precisa ter a coluna "Processo Notificado" para vincular ocorrências por processo.'
+        )
+
     acumulador = {}
 
     for _, row in notificacoes.iterrows():
-        processo = limpar_texto(row.get(col_processo, "")) if col_processo else "Não informado"
+        processo_original = limpar_texto(row.get(col_processo, ""))
+        processo = processo_original or "NÃO INFORMADO"
+
+        # PONTO-CHAVE: usa apenas Processo Notificado para encontrar o dono do processo.
+        # Não usa o campo Responsável da notificação.
         dados_org = buscar_no_organograma(processo, mapa_org)
 
         if dados_org:
-            responsavel = dados_org.get("responsavel", "")
-            setor = dados_org.get("setor", processo)
+            responsavel = dados_org.get("responsavel", "") or f"PROCESSO NÃO MAPEADO: {processo}"
+            setor = dados_org.get("setor", processo) or processo
             dir_org = dados_org.get("diretoria", "")
             ger_org = dados_org.get("gerencia", "")
         else:
-            responsavel = limpar_texto(row.get(col_resp, "")) if col_resp else ""
+            responsavel = f"PROCESSO NÃO MAPEADO: {processo}"
             setor = processo
-            dir_org = ""
-            ger_org = ""
+            dir_org = "Diretoria Geral"
+            ger_org = "Processo não encontrado no Organograma"
 
-        responsavel = responsavel or "NÃO DEFINIDO"
         item = obter_resp(resultado, responsavel, setor=setor, diretoria=dir_org, gerencia=ger_org)
 
         if responsavel not in acumulador:
