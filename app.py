@@ -1,12 +1,18 @@
 import streamlit as st
+import json
+import re
 
-responsaveis = {
-    'andamento': int(notif_abertas),
-    'tx_resolucao': tx_resolucao
-}
+def processar_responsaveis(acoes, indicadores, notificacoes):
 
-return responsaveis
+    notif_abertas = len(notificacoes)
+    tx_resolucao = 85  # exemplo
 
+    responsaveis = {
+        'andamento': int(notif_abertas),
+        'tx_resolucao': tx_resolucao
+    }
+
+    return responsaveis
 
 
 def atualizar_html(template_html, dados_json):
@@ -14,7 +20,9 @@ def atualizar_html(template_html, dados_json):
     with open(template_html, 'r', encoding='utf-8') as f:
         html = f.read()
 
-    novo_bloco = f'const RESP={json.dumps(dados_json, ensure_ascii=False)};'
+    novo_bloco = (
+        f'const RESP={json.dumps(dados_json, ensure_ascii=False)};'
+    )
 
     html = re.sub(
         r'const RESP=.*?;</script>',
