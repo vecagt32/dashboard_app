@@ -1,81 +1,428 @@
 <!DOCTYPE html>
-const root=document.getElementById('cards');
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analytics | Performance & Qualidade</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700;900&display=swap');
 
-const entries=Object.entries(RESP);
+  :root {
+    --bg-dark: #0B0F19;
+    --bg-panel: #1A2235;
+    --bg-card: #222B40;
+    --text-main: #F3F4F6;
+    --text-muted: #9CA3AF;
+    --accent-blue: #3B82F6;
+    --accent-cyan: #06B6D4;
+    --success: #10B981;
+    --warning: #F59E0B;
+    --danger: #EF4444;
+    --border: #374151;
+  }
 
-const sorted=[...entries]
-.sort((a,b)=>b[1].score_geral-a[1].score_geral);
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+  
+  body { 
+    background-color: var(--bg-dark); 
+    color: var(--text-main); 
+    padding: 20px 30px; 
+    min-height: 100vh;
+  }
 
-root.innerHTML='';
+  /* --- HEADER SPORTS ANALYTICS --- */
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 15px;
+    margin-bottom: 25px;
+  }
+  header h1 { font-weight: 900; font-size: 32px; letter-spacing: -1px; text-transform: uppercase; }
+  header h1 span { color: var(--accent-cyan); }
+  .top-kpis { display: flex; gap: 30px; }
+  .kpi-master { text-align: right; }
+  .kpi-master .lbl { font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 1px; }
+  .kpi-master .val { font-size: 28px; font-weight: 900; line-height: 1.1; }
+  .kpi-master .val.cyan { color: var(--accent-cyan); }
+  .kpi-master .val.red { color: var(--danger); }
 
-sorted.forEach((item,index)=>{
+  /* --- BARRA DE CONTROLE --- */
+  .controls {
+    background: var(--bg-panel);
+    padding: 15px 20px;
+    border-radius: 8px;
+    margin-bottom: 25px;
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    border: 1px solid var(--border);
+  }
+  .controls input {
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    padding: 10px 15px;
+    border-radius: 6px;
+    width: 300px;
+    outline: none;
+    font-size: 14px;
+    transition: border 0.2s;
+  }
+  .controls input:focus { border-color: var(--accent-cyan); }
 
-const nome=item[0];
-const d=item[1];
+  /* --- GRID DE CARDS --- */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 20px;
+  }
+  
+  .card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .card:hover {
+    transform: translateY(-5px);
+    border-color: var(--accent-cyan);
+    box-shadow: 0 10px 30px rgba(6, 182, 212, 0.15);
+  }
+  .card::before {
+    content: ''; position: absolute; left: 0; top: 0; width: 4px; height: 100%; background: var(--border);
+  }
+  .card.status-good::before { background: var(--success); }
+  .card.status-warn::before { background: var(--warning); }
+  .card.status-bad::before { background: var(--danger); }
 
-const card=document.createElement('div');
-card.className='card';
+  .c-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+  .c-title { font-size: 18px; font-weight: 700; line-height: 1.2; max-width: 70%; }
+  .c-gestor { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+  
+  .score-badge {
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    border-radius: 8px;
+    text-align: center;
+    min-width: 65px;
+  }
+  .score-badge .s-val { font-size: 20px; font-weight: 900; }
+  .score-badge .s-lbl { font-size: 9px; text-transform: uppercase; color: var(--text-muted); }
 
-card.innerHTML=`
+  .c-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+  .stat-row { font-size: 13px; }
+  .stat-row span.lbl { color: var(--text-muted); display: block; margin-bottom: 3px; font-size: 11px; text-transform: uppercase; }
+  .stat-row span.val { font-weight: 700; font-size: 15px;}
+  
+  /* --- MODAL DE DETALHAMENTO --- */
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(11, 15, 25, 0.9); backdrop-filter: blur(5px);
+    display: none; justify-content: center; align-items: center; z-index: 1000;
+  }
+  .modal {
+    background: var(--bg-panel); width: 90%; max-width: 1200px; max-height: 85vh;
+    border-radius: 12px; border: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+  }
+  .m-header {
+    padding: 20px 30px; background: var(--bg-card); border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .m-header h2 { font-size: 22px; font-weight: 800; }
+  .close-btn { background: none; border: none; color: var(--text-main); font-size: 30px; cursor: pointer; line-height: 1; }
+  
+  .m-tabs { display: flex; padding: 0 30px; background: var(--bg-card); border-bottom: 1px solid var(--border); }
+  .tab { padding: 15px 20px; color: var(--text-muted); cursor: pointer; font-weight: 700; font-size: 13px; text-transform: uppercase; border-bottom: 3px solid transparent; }
+  .tab.active { color: var(--accent-cyan); border-bottom-color: var(--accent-cyan); }
+  
+  .m-body { padding: 30px; overflow-y: auto; flex: 1; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
 
-<div class="rank">#${index+1}</div>
+  /* Tabelas */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 12px 15px; color: var(--text-muted); font-size: 11px; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+  td { padding: 12px 15px; border-bottom: 1px solid #2A344A; color: #D1D5DB; }
+  tr:hover td { background: var(--bg-card); }
+  
+  .chip { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; display: inline-block; text-transform: uppercase; }
+  .chip.ok { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+  .chip.warn { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+  .chip.bad { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+</style>
+</head>
+<body>
 
-<div class="nome">${nome}</div>
+<script>
+const RESP = {
+  // Dados de Exemplo (Substituídos via Python)
+  acoes: [
+    { Titulo: "Requisito: Definir diretrizes de segurança", Setor: "PAM", Responsavel: "Mylena", Progresso: 1, Status: "Concluída" },
+    { Titulo: "Requisito: Treinamento ONA", Setor: "SADT", Responsavel: "Yuri", Progresso: 0.5, Status: "Em Andamento" }
+  ],
+  indicadores: [
+    { Indicadores: "Percentual de Atendimento (Resultado)", Setor: "PAM", Status: "Dentro do Prazo" },
+    { Indicadores: "Taxa de Absenteísmo (Processo)", Setor: "SADT", Status: "Fora do Prazo" }
+  ],
+  notificacoes: [
+    { Serial: "INC-1511", Titulo: "RN sem alimentação", "Processo Notificado": "PAM", Situação: "Finalizada", Tipo: "Incidente" },
+    { Serial: "INC-1512", Titulo: "Falha Equipamento Raio-X", "Processo Notificado": "SADT", Situação: "Nova", Tipo: "Incidente" }
+  ]
+};
+</script>
 
-<div class="score" style="--score:${d.score_geral}">
-${d.score_geral.toFixed(1)}
+<header>
+  <div>
+    <h1>Performance <span>Analytics</span></h1>
+    <div style="color: var(--text-muted); font-size: 14px; margin-top: 5px;">Dashboard Corporativo ONA - Visão Consolidada</div>
+  </div>
+  <div class="top-kpis">
+    <div class="kpi-master">
+      <div class="lbl">Score Global</div>
+      <div class="val cyan" id="kpi-score">0%</div>
+    </div>
+    <div class="kpi-master">
+      <div class="lbl">Notificações Críticas</div>
+      <div class="val red" id="kpi-crits">0</div>
+    </div>
+  </div>
+</header>
+
+<div class="controls">
+  <input type="text" id="search-input" placeholder="Buscar por Setor, Processo ou Gestor..." onkeyup="renderGrid()">
 </div>
 
-<div class="risco" style="color:${scoreColor(d.score_geral)}">
-${d.risco.nivel}
+<div class="grid" id="main-grid"></div>
+
+<div class="modal-overlay" id="modal" onclick="if(event.target===this) closeModal()">
+  <div class="modal">
+    <div class="m-header">
+      <div>
+        <h2 id="modal-title">Processo</h2>
+        <div id="modal-subtitle" style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Gestor</div>
+      </div>
+      <button class="close-btn" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="m-tabs">
+      <div class="tab active" onclick="switchTab('acoes')">Ações ONA</div>
+      <div class="tab" onclick="switchTab('ind')">Indicadores</div>
+      <div class="tab" onclick="switchTab('notif')">Notificações</div>
+    </div>
+    <div class="m-body">
+      
+      <div class="tab-content active" id="tab-acoes">
+        <table id="tbl-acoes">
+          <thead><tr><th>Ação / Título</th><th>Progresso</th><th>Status</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="tab-content" id="tab-ind">
+        <table id="tbl-ind">
+          <thead><tr><th>Indicador Monitorado</th><th>Relevância</th><th>Status Prazo</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="tab-content" id="tab-notif">
+        <table id="tbl-notif">
+          <thead><tr><th>Serial</th><th>Descrição da Ocorrência</th><th>Tipo</th><th>Situação</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
 </div>
 
-<div class="metrics">
+<script>
+let dadosProcessados = {};
 
-<div class="metric">
-<label>Ações</label>
-<strong>${d.performance.acoes}%</strong>
-<div class="bar">
-<div class="fill" style="width:${d.performance.acoes}%;background:${scoreColor(d.performance.acoes)}"></div>
-</div>
-</div>
-
-<div class="metric">
-<label>Indicadores</label>
-<strong>${d.performance.indicadores}%</strong>
-<div class="bar">
-<div class="fill" style="width:${d.performance.indicadores}%;background:${scoreColor(d.performance.indicadores)}"></div>
-</div>
-</div>
-
-<div class="metric">
-<label>Notificações</label>
-<strong>${d.performance.notificacoes}%</strong>
-<div class="bar">
-<div class="fill" style="width:${d.performance.notificacoes}%;background:${scoreColor(d.performance.notificacoes)}"></div>
-</div>
-</div>
-
-<div class="metric">
-<label>Resolutividade</label>
-<strong>${d.performance.resolutividade}%</strong>
-<div class="bar">
-<div class="fill" style="width:${d.performance.resolutividade}%;background:${scoreColor(d.performance.resolutividade)}"></div>
-</div>
-</div>
-
-</div>
-
-`;
-
-root.appendChild(card);
-
-});
-
+function classificarStatus(status) {
+  let s = (status || "").toLowerCase();
+  if (s.includes("conclu") || s.includes("dentro") || s.includes("finalizada")) return "ok";
+  if (s.includes("fora") || s.includes("nova") || s.includes("atraso") || s.includes("cadastro")) return "bad";
+  return "warn";
 }
 
-render();
+// 1. O MOTOR: Processa os arrays puros injetados pelo Python
+function processarDados() {
+  dadosProcessados = {};
+  let acoes = RESP.acoes || [];
+  let inds = RESP.indicadores || [];
+  let notifs = RESP.notificacoes || [];
 
+  // Função auxiliar para criar registro de processo/setor se não existir
+  const getProcesso = (nome) => {
+    let key = nome || "Não Informado";
+    if (!dadosProcessados[key]) {
+      dadosProcessados[key] = { nome: key, gestor: "N/A", acoes: [], inds: [], notifs: [], score: 0 };
+    }
+    return dadosProcessados[key];
+  };
+
+  // Mapear Ações
+  acoes.forEach(a => {
+    let p = getProcesso(a.Setor || a.setor);
+    if(a.Responsavel || a.responsavel) p.gestor = a.Responsavel || a.responsavel;
+    p.acoes.push(a);
+  });
+
+  // Mapear Indicadores
+  inds.forEach(i => {
+    let p = getProcesso(i.Setor || i.setor);
+    p.inds.push(i);
+  });
+
+  // Mapear Notificações (Pela Coluna "Processo Notificado" conforme solicitado)
+  notifs.forEach(n => {
+    let p = getProcesso(n["Processo Notificado"] || n.processo_notificado);
+    p.notifs.push(n);
+  });
+
+  // Cálculo Analítico de Desempenho e Pesos
+  Object.values(dadosProcessados).forEach(p => {
+    let sAcoes = p.acoes.length > 0 ? p.acoes.reduce((acc, a) => acc + (parseFloat(a.Progresso || a.progresso || 0)), 0) / p.acoes.length * 100 : 100;
+    
+    let indTotalPesos = 0; let indPontos = 0;
+    p.inds.forEach(i => {
+      let nomeInd = (i.Indicadores || i.indicador || "");
+      let peso = nomeInd.includes("(Resultado)") ? 3 : 1;
+      indTotalPesos += peso;
+      if (classificarStatus(i.Status || i.status) === "ok") indPontos += peso;
+    });
+    let sInd = indTotalPesos > 0 ? (indPontos / indTotalPesos) * 100 : 100;
+
+    let totalNotif = p.notifs.length;
+    let resolvidas = p.notifs.filter(n => classificarStatus(n.Situação || n.situacao) === "ok").length;
+    let txResolv = totalNotif > 0 ? (resolvidas / totalNotif) : 1;
+    let pendentes = totalNotif - resolvidas;
+
+    let nota = ((sAcoes * 0.4) + (sInd * 0.6)) * txResolv;
+    nota -= (pendentes * 10); // Penalidade Severa por pendência
+
+    p.score = Math.max(0, Math.min(100, Math.round(nota)));
+  });
+}
+
+// 2. A TELA: Renderiza os cards baseado na busca
+function renderGrid() {
+  const grid = document.getElementById('main-grid');
+  const busca = document.getElementById('search-input').value.toLowerCase();
+  grid.innerHTML = '';
+
+  let kpiTotalScore = 0; let kpiCount = 0; let kpiPendentes = 0;
+
+  Object.values(dadosProcessados).forEach(p => {
+    if (p.nome === "Não Informado" && p.acoes.length === 0 && p.inds.length === 0 && p.notifs.length === 0) return;
+    
+    kpiTotalScore += p.score; kpiCount++;
+    kpiPendentes += p.notifs.filter(n => classificarStatus(n.Situação || n.situacao) !== "ok").length;
+
+    if (busca && !p.nome.toLowerCase().includes(busca) && !p.gestor.toLowerCase().includes(busca)) return;
+
+    let statusClass = p.score >= 80 ? "status-good" : (p.score >= 50 ? "status-warn" : "status-bad");
+    let notifPend = p.notifs.filter(n => classificarStatus(n.Situação || n.situacao) !== "ok").length;
+
+    grid.innerHTML += `
+      <div class="card ${statusClass}" onclick="openModal('${p.nome}')">
+        <div class="c-header">
+          <div>
+            <div class="c-title">${p.nome}</div>
+            <div class="c-gestor">${p.gestor}</div>
+          </div>
+          <div class="score-badge">
+            <div class="s-val">${p.score}%</div>
+            <div class="s-lbl">Score</div>
+          </div>
+        </div>
+        <div class="c-stats">
+          <div class="stat-row"><span class="lbl">Progresso ONA</span><span class="val">${p.acoes.length} Ações</span></div>
+          <div class="stat-row"><span class="lbl">Indicadores</span><span class="val">${p.inds.length} Monitorados</span></div>
+          <div class="stat-row"><span class="lbl">Ocorrências</span><span class="val" style="color: ${notifPend > 0 ? 'var(--danger)' : 'var(--text-main)'}">${notifPend} Pendentes</span></div>
+        </div>
+      </div>
+    `;
+  });
+
+  let notaGeral = kpiCount > 0 ? Math.round(kpiTotalScore / kpiCount) : 0;
+  document.getElementById('kpi-score').innerText = notaGeral + '%';
+  document.getElementById('kpi-score').className = 'val ' + (notaGeral >= 70 ? 'cyan' : 'red');
+  document.getElementById('kpi-crits').innerText = kpiPendentes;
+}
+
+// 3. O DETALHAMENTO: Abre o Modal e injeta as tabelas
+let processoAtual = null;
+
+function openModal(nome) {
+  processoAtual = dadosProcessados[nome];
+  if(!processoAtual) return;
+
+  document.getElementById('modal-title').innerText = processoAtual.nome;
+  document.getElementById('modal-subtitle').innerText = "Gestor: " + processoAtual.gestor;
+
+  // Renderiza ONA
+  let tAcoes = document.querySelector('#tbl-acoes tbody'); tAcoes.innerHTML = '';
+  if(processoAtual.acoes.length === 0) tAcoes.innerHTML = "<tr><td colspan='3'>Sem ações.</td></tr>";
+  processoAtual.acoes.forEach(a => {
+    let status = a.Status || a.status || "N/A";
+    tAcoes.innerHTML += `<tr>
+      <td>${a.Titulo || a.titulo}</td>
+      <td>${Math.round((a.Progresso || a.progresso || 0)*100)}%</td>
+      <td><span class="chip ${classificarStatus(status)}">${status}</span></td>
+    </tr>`;
+  });
+
+  // Renderiza Indicadores
+  let tInd = document.querySelector('#tbl-ind tbody'); tInd.innerHTML = '';
+  if(processoAtual.inds.length === 0) tInd.innerHTML = "<tr><td colspan='3'>Sem indicadores.</td></tr>";
+  processoAtual.inds.forEach(i => {
+    let status = i.Status || i.status || "N/A";
+    let nome = i.Indicadores || i.indicador || "";
+    let pesoL = nome.includes("(Resultado)") ? "<span style='color:var(--warning)'>Estratégico</span>" : "Padrão";
+    tInd.innerHTML += `<tr>
+      <td>${nome}</td><td>${pesoL}</td>
+      <td><span class="chip ${classificarStatus(status)}">${status}</span></td>
+    </tr>`;
+  });
+
+  // Renderiza Notificações
+  let tNotif = document.querySelector('#tbl-notif tbody'); tNotif.innerHTML = '';
+  if(processoAtual.notifs.length === 0) tNotif.innerHTML = "<tr><td colspan='4'>Sem ocorrências.</td></tr>";
+  processoAtual.notifs.forEach(n => {
+    let status = n.Situação || n.situacao || "N/A";
+    tNotif.innerHTML += `<tr>
+      <td>${n.Serial || n.serial || "-"}</td>
+      <td>${n.Titulo || n.titulo || "-"}</td>
+      <td>${n.Tipo || n.tipo || "-"}</td>
+      <td><span class="chip ${classificarStatus(status)}">${status}</span></td>
+    </tr>`;
+  });
+
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+function switchTab(tabId) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  
+  event.target.classList.add('active');
+  document.getElementById('tab-' + tabId).classList.add('active');
+}
+
+// Inicializa o Dashboard
+window.onload = () => { processarDados(); renderGrid(); };
 </script>
 </body>
 </html>
