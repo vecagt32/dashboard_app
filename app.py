@@ -1,10 +1,11 @@
 import streamlit as st
-                'andamento': int(notif_abertas),
-                'tx_resolucao': tx_resolucao
-            }
-        }
 
-    return responsaveis
+responsaveis = {
+    'andamento': int(notif_abertas),
+    'tx_resolucao': tx_resolucao
+}
+
+return responsaveis
 
 
 
