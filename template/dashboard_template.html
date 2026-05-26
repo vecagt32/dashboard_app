@@ -1,609 +1,315 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard de Performance & Qualidade — ONA 2026</title>
+<title>Placar de Qualidade ONA</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed:ital,wght@0,400;0,700;0,900;1,700&display=swap');
+
   :root {
-    --bg-main: #0f172a;
-    --bg-card: #1e293b;
-    --bg-input: #334155;
-    --text-main: #f8fafc;
-    --text-muted: #94a3b8;
-    --accent-sport: #06b6d4; /* Tom Ciano Esportivo baseado na logo */
-    --accent-glow: rgba(6, 182, 212, 0.15);
-    --success: #10b981;
-    --warning: #f59e0b;
-    --danger: #ef4444;
-    --border-radius: 12px;
+    --br-green: #009c3b;
+    --br-green-dark: #0a2918;
+    --br-yellow: #ffdf00;
+    --br-blue: #002776;
+    --white: #ffffff;
+    --red-card: #e50000;
+    --yellow-card: #ffcc00;
   }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Arial', sans-serif; }
-  body { background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; padding: 20px; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   
-  .container { max-width: 1400px; margin: 0 auto; }
-  
-  /* Header Estilo Sport */
-  header {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-    border-left: 5px solid var(--accent-sport);
-    padding: 20px;
-    border-radius: var(--border-radius);
-    margin-bottom: 25px;
+  body { 
+    font-family: 'Roboto Condensed', sans-serif; 
+    background-color: var(--br-green-dark); 
+    background-image: repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(255,255,255,0.03) 40px, rgba(255,255,255,0.03) 80px);
+    color: var(--white); 
+    min-height: 100vh; 
+    padding: 10px 20px;
+  }
+
+  /* CABEÇALHO ESTILO TRANSMISSÃO ESPORTIVA */
+  .tv-header {
+    background: linear-gradient(90deg, var(--br-blue) 0%, #00123a 100%);
+    border-bottom: 5px solid var(--br-yellow);
+    padding: 15px 30px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    border-radius: 8px 8px 0 0;
+    margin-bottom: 20px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+    text-transform: uppercase;
   }
-  header h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; text-transform: uppercase; }
-  header h1 span { color: var(--accent-sport); }
-  header .meta { text-align: right; font-size: 12px; color: var(--text-muted); }
+  .tv-header h1 { font-weight: 900; font-size: 28px; font-style: italic; text-shadow: 2px 2px 0px #000; }
+  .tv-header h1 span { color: var(--br-yellow); }
+  .match-time { font-weight: 700; font-size: 18px; background: #000; padding: 5px 15px; border-radius: 4px; border: 1px solid #333;}
 
-  /* KPIs Globais */
-  .global-stats {
+  /* PLACAR GLOBAL (KPIS) */
+  .placar-global {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 15px;
-    margin-bottom: 25px;
+    margin-bottom: 30px;
   }
-  .kpi-card {
-    background: var(--bg-card);
+  .stat-box {
+    background: var(--br-green);
+    border-left: 6px solid var(--br-yellow);
     padding: 15px 20px;
-    border-radius: var(--border-radius);
-    border: 1px solid #334155;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 6px 15px rgba(0,0,0,0.4);
     position: relative;
     overflow: hidden;
   }
-  .kpi-card::after {
-    content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: var(--accent-sport); opacity: 0.5;
+  .stat-box::after {
+    content: ''; position: absolute; right: -20px; top: -20px; width: 100px; height: 100px;
+    background: rgba(255,255,255,0.1); transform: rotate(45deg);
   }
-  .kpi-card.critical::after { background: var(--danger); }
-  .kpi-card .label { font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; }
-  .kpi-card .value { font-size: 28px; font-weight: 800; margin-top: 5px; font-variant-numeric: tabular-nums; }
+  .stat-box.danger { border-left-color: var(--red-card); background: #3a0d0d; }
+  .stat-box .title { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+  .stat-box .value { font-size: 38px; font-weight: 900; text-shadow: 2px 2px 0px #000; }
 
-  /* Filtros */
-  .filter-bar {
-    background: var(--bg-card);
-    padding: 15px;
-    border-radius: var(--border-radius);
-    margin-bottom: 25px;
-    display: flex;
-    gap: 15px;
-    align-items: center;
-    border: 1px solid #334155;
-  }
-  .filter-bar select, .filter-bar input {
-    background: var(--bg-input);
-    border: 1px solid #475569;
-    color: var(--text-main);
-    padding: 8px 12px;
-    border-radius: 6px;
-    outline: none;
-    font-size: 14px;
-  }
-  .filter-bar select:focus { border-color: var(--accent-sport); }
-
-  /* Grid Principal de Processos */
-  .grid-processos {
+  /* GRADE DE GESTORES (JOGADORES EM CAMPO) */
+  .grid-campo {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
     gap: 20px;
   }
-  .card-processo {
-    background: var(--bg-card);
-    border-radius: var(--border-radius);
-    border: 1px solid #334155;
-    padding: 20px;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    position: relative;
-  }
-  .card-processo:hover {
-    transform: translateY(-4px);
-    border-color: var(--accent-sport);
-    box-shadow: 0 10px 25px var(--accent-glow);
-  }
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 15px;
-  }
-  .card-title { font-size: 16px; font-weight: 700; max-width: 75%; line-height: 1.2; }
-  .card-resp { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
-  
-  /* Velocímetro / Gauge de Performance */
-  .gauge-container {
-    position: relative;
-    width: 100px;
-    height: 100px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .gauge-svg { transform: rotate(-90deg); width: 100px; height: 100px; }
-  .gauge-bg { fill: none; stroke: #334155; stroke-width: 8; }
-  .gauge-fill {
-    fill: none;
-    stroke: var(--accent-sport);
-    stroke-width: 8;
-    stroke-dasharray: 251.2;
-    stroke-dashoffset: 251.2;
-    transition: stroke-dashoffset 0.5s ease;
-    stroke-linecap: round;
-  }
-  .gauge-text { position: absolute; font-size: 18px; font-weight: 800; }
 
-  .card-body-metrics {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+  /* CARTÃO DE JOGADOR (GESTORES) */
+  .card-jogador {
+    background: #113320;
+    border: 2px solid #1a4d30;
+    border-radius: 10px;
+    position: relative;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+    transition: transform 0.2s;
+  }
+  .card-jogador:hover { transform: scale(1.02); border-color: var(--br-yellow); }
+
+  .cj-header {
+    background: var(--br-blue);
+    padding: 15px;
+    border-radius: 8px 8px 0 0;
+    border-bottom: 3px solid var(--br-yellow);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .cj-nome { font-size: 20px; font-weight: 900; text-transform: uppercase; text-shadow: 1px 1px 2px #000;}
+  .cj-setor { font-size: 12px; color: #b0c4de; font-weight: 700; margin-top: 3px;}
+  
+  .badge-nota {
+    background: var(--br-green);
+    color: var(--white);
+    font-size: 24px;
+    font-weight: 900;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 2px solid var(--white);
+    box-shadow: 2px 2px 0px #000;
+  }
+  .badge-nota.ruim { background: var(--red-card); }
+  .badge-nota.media { background: #d47e00; }
+
+  .cj-body { padding: 15px; }
+
+  /* Barras de Estatísticas Estilo Pênaltis/Posse */
+  .linha-stat { margin-bottom: 12px; }
+  .ls-header { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
+  .bar-bg { background: #0a2918; height: 12px; border-radius: 6px; overflow: hidden; border: 1px solid #1a4d30; }
+  .bar-fill { height: 100%; background: var(--br-yellow); transition: width 0.5s ease; }
+  .bar-fill.green { background: #39FF14; }
+  .bar-fill.red { background: var(--red-card); }
+
+  /* Seção de Faltas/Cartões (Notificações) */
+  .painel-faltas {
+    background: #0a1f14;
+    padding: 10px;
+    border-radius: 6px;
     margin-top: 15px;
-    border-top: 1px solid #334155;
-    padding-top: 15px;
-  }
-  .mini-metric { font-size: 12px; }
-  .mini-metric .m-label { color: var(--text-muted); margin-bottom: 2px; }
-  .mini-metric .m-val { font-weight: 700; display: flex; align-items: center; gap: 5px; }
-
-  /* Modal de Expansão Detalhada */
-  .modal {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(15, 23, 42, 0.85);
-    backdrop-filter: blur(8px);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    padding: 20px;
-  }
-  .modal-content {
-    background: var(--bg-card);
-    width: 100%;
-    max-width: 1100px;
-    max-height: 90vh;
-    border-radius: var(--border-radius);
-    border: 1px solid #475569;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    animation: modalSlide 0.2s ease-out;
-  }
-  @keyframes modalSlide { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-  
-  .modal-header {
-    padding: 20px;
-    background: #1e293b;
-    border-bottom: 1px solid #334155;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-left: 4px solid var(--red-card);
   }
-  .modal-body { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 25px; }
-  .close-btn { background: none; border: none; color: var(--text-main); font-size: 24px; cursor: pointer; }
-  
-  /* Abas internas do Modal */
-  .modal-tabs { display: flex; gap: 10px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
-  .tab-btn {
-    background: none; border: none; color: var(--text-muted); padding: 8px 16px; cursor: pointer;
-    font-weight: 700; font-size: 13px; text-transform: uppercase; border-radius: 4px;
+  .cartao-icone {
+    display: inline-block; width: 14px; height: 18px; background: var(--red-card);
+    border-radius: 2px; margin-right: 5px; box-shadow: 1px 1px 2px #000;
   }
-  .tab-btn.active { background: var(--accent-sport); color: var(--bg-main); }
-
-  /* Tabelas Internas */
-  .table-wrapper { width: 100%; overflow-x: auto; background: #111827; border-radius: 6px; }
-  table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
-  th { background: #334155; padding: 12px; font-weight: 700; color: var(--text-main); text-transform: uppercase; font-size: 11px; }
-  td { padding: 12px; border-bottom: 1px solid #2d3748; color: #e2e8f0; }
-  tr:hover td { background: #1f2937; }
-
-  /* Chips de Status */
-  .chip {
-    padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; display: inline-block; text-transform: uppercase;
-  }
-  .chip.success { background: rgba(16, 185, 129, 0.2); color: var(--success); }
-  .chip.warning { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
-  .chip.danger { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
 </style>
 </head>
 <body>
 
-<div class="container">
-  <header>
-    <div>
-      <h1>Qualidade & Performance <span>// Dashboard</span></h1>
-      <div style="color: var(--text-muted); font-size: 13px; margin-top: 3px;">Análise unificada de Ações ONA, Indicadores e Ocorrências Críticas</div>
-    </div>
-    <div class="meta">
-      <div>Atualização Periódica: Maio 2026</div>
-      <div id="global-efficiency-badge" style="margin-top: 5px; font-weight: 800; color: var(--accent-sport);">Calculando...</div>
-    </div>
-  </header>
-
-  <div class="global-stats">
-    <div class="kpi-card">
-      <div class="label">Total Notificações</div>
-      <div class="value" id="kpi-total-notif">-</div>
-    </div>
-    <div class="kpi-card">
-      <div class="label">Resolutividade Global</div>
-      <div class="value" style="color: var(--success);" id="kpi-resolv">-</div>
-    </div>
-    <div class="kpi-card">
-      <div class="label">Ações ONA Planejadas</div>
-      <div class="value" id="kpi-ona-total">-</div>
-    </div>
-    <div class="kpi-card critical">
-      <div class="label">Incidentes Não Tratados</div>
-      <div class="value" style="color: var(--danger);" id="kpi-incidentes-criticos">-</div>
-    </div>
-  </div>
-
-  <div class="filter-bar">
-    <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">Filtrar Visão:</label>
-    <select id="filtro-diretoria" onchange="renderizarDashboard()">
-      <option value="TODAS">Todas as Diretorias</option>
-    </select>
-    <input type="text" id="busca-processo" placeholder="Buscar processo ou gestor..." oninput="renderizarDashboard()">
-  </div>
-
-  <div class="grid-processos" id="grid-main"></div>
-</div>
-
-<div class="modal" id="detalhe-modal" onclick="if(event.target===this) fecharModal()">
-  <div class="modal-content">
-    <div class="modal-header">
-      <div>
-        <h2 id="modal-processo-titulo" style="font-size: 18px; font-weight: 800;">-</h2>
-        <div id="modal-processo-gestor" style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">-</div>
-      </div>
-      <button class="close-btn" onclick="fecharModal()">&times;</button>
-    </div>
-    <div class="modal-body">
-      <div class="modal-tabs">
-        <button class="tab-btn active" onclick="trocarAbaModal('tab-ona', this)">Ações ONA</button>
-        <button class="tab-btn" onclick="trocarAbaModal('tab-ind', this)">Indicadores de Prazo</button>
-        <button class="tab-btn" onclick="trocarAbaModal('tab-notif', this)">Notificações Recebidas</button>
-      </div>
-
-      <div id="tab-ona" class="modal-tab-content">
-        <div class="table-wrapper">
-          <table id="table-ona-dados"><thead><tr><th>Título da Ação</th><th>Plano de Origem</th><th>Progresso</th><th>Status</th></tr></thead><tbody></tbody></table>
-        </div>
-      </div>
-      
-      <div id="tab-ind" class="modal-tab-content" style="display:none;">
-        <div class="table-wrapper">
-          <table id="table-ind-dados"><thead><tr><th>Indicador</th><th>Tipo</th><th>Data Verificação</th><th>Status</th></tr></thead><tbody></tbody></table>
-        </div>
-      </div>
-
-      <div id="tab-notif" class="modal-tab-content" style="display:none;">
-        <div class="table-wrapper">
-          <table id="table-notif-dados"><thead><tr><th>Serial</th><th>Título da Ocorrência</th><th>Classificação</th><th>Situação</th></tr></thead><tbody></tbody></table>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script>
-// =========================================================================
-// BLOCO CENTRAL: API PADRÃO DE DADOS (RESP)
-// Mantenha essa estrutura intacta para a injeção via Python/Excel
-// =========================================================================
 const RESP = {
-  organograma: [
-    { codigo: "1.1.1", setor: "APGQ - Assessoria de Planejamento e Gestão da Qualidade", responsavel: "Mylena Justino da Silva Brito", gerencia: "Ligado direto a diretoria", diretoria: "Diretoria Geral" },
-    { codigo: "1.1.10", setor: "AC - Assessoria de Comunicação", responsavel: "Rita De Cassia Rotterdan Lisboa", gerencia: "Ligado direto a diretoria", diretoria: "Diretoria Geral" },
-    { codigo: "1.1.3", setor: "CEP - Centro de Ensino e Pesquisa", responsavel: "Cintia Kelciane Gomes de Oliveira", gerencia: "Ligado direto a diretoria", diretoria: "Diretoria Geral" },
-    { codigo: "1.1.5", setor: "Diretoria Geral", responsavel: "Yuri Amorim Braga", gerencia: "Ligado direto a diretoria", diretoria: "Diretoria Geral" },
-    { codigo: "1.1.6", setor: "Assessoria da Diretoria Geral", responsavel: "Natacha Flora Alves de Moraes", gerencia: "Ligado direto a diretoria", diretoria: "Diretoria Geral" },
-    { codigo: "1.1.6", setor: "NGAH - Núcleo de Gestão de Atendimento e Humanização", responsavel: "Rafaela Braga Simões", gerencia: "Ligado direto a diretoria", diretoria: "Diretoria Geral" },
-    { codigo: "3.1.4.2", setor: "NBSC - Núcleo de Bem-Estar e Saúde do Colaborador", responsavel: "Mariana Feitosa Silva", gerencia: "Coordenação de Gestão de Pessoas", diretoria: "Dir. Administrativa/Financeira" },
-    { codigo: "3.1.4.3", setor: "NEP - Núcleo de Educação Permanente", responsavel: "Cleudimara Pereira Maciel Souza", gerencia: "Coordenação de Gestão de Pessoas", diretoria: "Dir. Administrativa/Financeira" },
-    { codigo: "3.1.4.4", setor: "SESMT - Serviço Especializado em Segurança e Medicina do Trabalho", responsavel: "Samilly dos Santos Gurgel", gerencia: "Coordenação de Gestão de Pessoas", diretoria: "Dir. Administrativa/Financeira" },
-    { codigo: "3.1.5.1", setor: "CONT - Contratos", responsavel: "Aislan Azevedo Santos", gerencia: "Coordenação de Gestão Financeira", diretoria: "Dir. Administrativa/Financeira" },
-    { codigo: "3.1.5.2", setor: "FAT - Faturamento", responsavel: "Aryadna Pinheiro Pereira", gerencia: "Coordenação de Gestão Financeira", diretoria: "Dir. Administrativa/Financeira" },
-    { codigo: "3.1.5.3", setor: "FIN - Setor de Execução Financeira e Custos", responsavel: "Aislan Azevedo Santos", gerencia: "Coordenação de Gestão Financeira", diretoria: "Dir. Administrativa/Financeira" },
-    { codigo: "3.1.6.1", setor: "SRFP - Setor de Registro e Folha de Ponto", responsavel: "Lucineide de Oliveira", gerencia: "Coordenação de Pessoal", diretoria: "Dir. Administrativa/Financeira" },
-    { codigo: "1.1.17", setor: "GRSS - Gerenciamento de Resíduos de Serviço de Saúde", responsavel: "Aliny Lopes Coelho", gerencia: "Ligado direto a diretoria", diretoria: "Diretoria Geral" },
-    { codigo: "4.1.1", setor: "ALM - Almoxarifado", responsavel: "Madson de Souza Santos", gerencia: "Coordenação de Suprimentos", diretoria: "Dir. Administrativa/Financeira" }
-  ],
-  acoes: [
-    { titulo: "Nível 1 - 1.1.17.1 Requisito: Definir diretrizes formais para prevenção, controle de infecção e biossegurança e implementa ações sistemáticas (CORE)", plano: "ONA 2026: Grupo 1.1.17", tipo: "ONA", setor: "GRSS - Gerenciamento de Resíduos de Serviço de Saúde", responsavel: "Aliny Lopes Coelho", progresso: 0.5, status: "Em Andamento" },
-    { titulo: "Nível 1 - 1.1.17.2 Requisito: Prover condições para que o Serviço de Prevenção, Controle de Infecção e Biossegurança assessore tecnicamente os processos", plano: "ONA 2026: Grupo 1.1.17", tipo: "ONA", setor: "GRSS - Gerenciamento de Resíduos de Serviço de Saúde", responsavel: "Aliny Lopes Coelho", progresso: 0.5, status: "Em Andamento" },
-    { titulo: "Nível 3 - 1.3.1.9 Requisito: Demonstrar a efetividade das ações de sustentabilidade ambiental, consolidando o compromisso institucional", plano: "ONA 2026: Subseção 1.3", tipo: "ONA", setor: "Diretoria Geral", responsavel: "Yuri Amorim Braga", progresso: 0.0, status: "Não Iniciada" },
-    { titulo: "Nível 3 - 1.3.1.10 Requisito: Comunicar de forma clara e contínua a sua abordagem estratégica para cuidados ambientalmente sustentáveis", plano: "ONA 2026: Subseção 1.3", tipo: "ONA", setor: "Diretoria Geral", responsavel: "Yuri Amorim Braga", progresso: 0.0, status: "Não Iniciada" }
-  ],
-  indicadores: [
-    { tipo: "Atraso na Alimentação", indicador: "Percentual de Acurácia de Alto Custo - Almoxarifado (Resultado)", status: "Fora do Prazo", responsavel: "Madson de Souza Santos", setor: "ALM - Almoxarifado", data: "08/05/2026", serial: "NC 3318 / 2026" },
-    { tipo: "Atraso na Análise", indicador: "Percentual de Acurácia de Alto Custo - Almoxarifado (Resultado)", status: "Fora do Prazo", responsavel: "Madson de Souza Santos", setor: "ALM - Almoxarifado", data: "11/05/2026", serial: "NC 3441 / 2026" },
-    { tipo: "Alimentação em dia", indicador: "Percentual de Atendimento (Processo)", status: "Dentro do Prazo", responsavel: "Madson de Souza Santos", setor: "ALM - Almoxarifado", data: "08/05/2026", serial: "NC 3316 / 2026" },
-    { tipo: "Atraso na Análise", indicador: "Percentual de Atendimento (Processo)", status: "Fora do Prazo", responsavel: "Madson de Souza Santos", setor: "ALM - Almoxarifado", data: "11/05/2026", serial: "NC 3439 / 2026" },
-    { tipo: "Alimentação em dia", indicador: "Absenteísmo (Resultado)", status: "Dentro do Prazo", responsavel: "Lucineide de Oliveira", setor: "SRFP - Setor de Registro e Folha de Ponto", data: "2026-05-05", serial: "n/a" },
-    { tipo: "Análise em dia", indicador: "Absenteísmo (Resultado)", status: "Dentro do Prazo", responsavel: "Lucineide de Oliveira", setor: "SRFP - Setor de Registro e Folha de Ponto", data: "2026-05-08", serial: "n/a" },
-    { tipo: "Atraso na Alimentação", indicador: "Valor pago Rescisões (Resultado)", status: "Fora do Prazo", responsavel: "Lucineide de Oliveira", setor: "SRFP - Setor de Registro e Folha de Ponto", data: "2026-05-05", serial: "n/a" },
-    { tipo: "Análise em dia", indicador: "Valor pago Rescisões (Resultado)", status: "Dentro do Prazo", responsavel: "Lucineide de Oliveira", setor: "SRFP - Setor de Registro e Folha de Ponto", data: "2026-05-08", serial: "n/a" }
-  ],
-  notificacoes: [
-    { titulo: "RN sem alimentação", serial: "INC 1511 / 2026", setor: "Gerência de Cuidados Materno/Infantil", responsavel: "Mylena Justino da Silva Brito", situacao: "Finalizada", criado: "01/01/2026", processo_notificado: "PAM - Pronto Atendimento Materno", classificacao: "Circunstância de Risco", tipo: "Incidente" },
-    { titulo: "Barulho excessivo e tranco no disparador de Raio-X", serial: "INC 1512 / 2026", setor: "SADT - Unidade de Diagnóstico por Imagem", responsavel: "Yuri Amorim Braga", situacao: "Nova", criado: "11/05/2026", processo_notificado: "SADT - Unidade de Diagnóstico por Imagem", classificacao: "Circunstância de Risco", tipo: "Incidente" },
-    { titulo: "Acidente com material perfurocortante em descarte", serial: "AT 0103 / 2026", setor: "Coordenação de Pessoal / SESMT", responsavel: "Samilly dos Santos Gurgel", situacao: "Nova", criado: "11/05/2026", processo_notificado: "PS - Pronto Socorro Adulto", classificacao: "Acidente de Trabalho", tipo: "Acidente de Trabalho" },
-    { titulo: "Respingo de soro em mucosa ocular esquerda", serial: "AT 0104 / 2026", setor: "Coordenação de Pessoal / SESMT", responsavel: "Samilly dos Santos Gurgel", situacao: "Nova", criado: "11/05/2026", processo_notificado: "UICM - Unidade de Internação Clínica Médica", classificacao: "Acidente de Trabalho", tipo: "Acidente de Trabalho" }
-  ]
-};
-
-// =========================================================================
-// MOTOR LOGÍCO DE COMPUTAÇÃO E CORRELAÇÃO DE DESEMPENHO
-// =========================================================================
-let processosProcessados = {};
-
-function processarDados() {
-  processosProcessados = {};
-
-  // Inicializa todos os processos conhecidos pelo organograma
-  RESP.organograma.forEach(org => {
-    processosProcessados[org.setor] = {
-      nome: org.setor,
-      responsavel: org.responsavel,
-      diretoria: org.diretoria,
-      acoes: [],
-      indicadores: [],
-      notificacoes: [],
-      score: 100
-    };
-  });
-
-  // Vincula Ações ONA
-  RESP.acoes.forEach(a => {
-    if (processosProcessados[a.setor]) {
-      processosProcessados[a.setor].acoes.push(a);
-    }
-  });
-
-  // Vincula Indicadores
-  RESP.indicadores.forEach(i => {
-    if (processosProcessados[i.setor]) {
-      processosProcessados[i.setor].indicadores.push(i);
-    }
-  });
-
-  // CORRELAÇÃO CRÍTICA: Mapeia Notificações pela coluna "Processo Notificado"
-  RESP.notificacoes.forEach(n => {
-    let procNome = n.processo_notificado;
-    // Se o processo exato não existir no organograma, cria uma entrada dinâmica ou associa ao setor correspondente
-    if (!processosProcessados[procNome]) {
-      processosProcessados[procNome] = {
-        nome: procNome,
-        responsavel: n.responsavel || "Gestor Não Vinculado",
-        diretoria: "Operacional",
-        acoes: [],
-        indicadores: [],
-        notificacoes: [],
-        score: 100
-      };
-    }
-    processosProcessados[procNome].notificacoes.push(n);
-  });
-
-  // APLICAÇÃO DO MODELO DE PESOS, CORTES E PENALIDADES
-  Object.keys(processosProcessados).forEach(key => {
-    let p = procesosProcessados[key];
-    
-    // 1. Score das Ações ONA (Base: média de progresso)
-    let totalProgressoAcoes = 0;
-    p.acoes.forEach(a => totalProgressoAcoes += (a.progresso || 0));
-    let scoreAcoes = p.acoes.length > 0 ? (totalProgressoAcoes / p.acoes.length) * 100 : 100;
-
-    // 2. Score dos Indicadores com Pesos Estratégicos
-    let somaPesosIndicadores = 0;
-    let somaConformidadePesada = 0;
-    p.indicadores.forEach(ind => {
-      // Indicadores Estratégicos contendo "(Resultado)" tem Peso 3, os demais Peso 1
-      let peso = ind.indicador.includes("(Resultado)") ? 3 : 1;
-      somaPesosIndicadores += peso;
-      if (ind.status === "Dentro do Prazo" || ind.status.toLowerCase().includes("em dia")) {
-        somaConformidadePesada += peso;
-      }
-    });
-    let scoreIndicadores = somaPesosIndicadores > 0 ? (somaConformidadePesada / somaPesosIndicadores) * 100 : 100;
-
-    // 3. Impacto e Resolutividade de Notificações (Penalização Crítica)
-    let totalNotif = p.notificacoes.length;
-    let finalizadas = p.notificacoes.filter(n => n.situacao === "Finalizada").length;
-    let naoTratadas = totalNotif - finalizadas;
-    
-    let taxaResolutividade = totalNotif > 0 ? (finalizadas / totalNotif) : 1;
-    // Penalidade por ocorrência não tratada/pendente: -8 pontos por item
-    let penalidadeNotif = naoTratadas * 8;
-
-    // Fórmula Final Ponderada Equilibrada
-    let notaCalculada = ((scoreAcoes * 0.4) + (scoreIndicadores * 0.4)) * taxaResolutividade - penalidadeNotif;
-    
-    // Normalização da nota de corte entre 0 e 100
-    p.score = Math.max(0, Math.min(100, Math.round(notaCalculada)));
-  });
-
-  // Alimenta os filtros dinamicamente
-  let diretorias = new Set();
-  RESP.organograma.forEach(o => diretorias.add(o.diretoria));
-  let select = document.getElementById("filtro-diretoria");
-  select.innerHTML = '<option value="TODAS">Todas as Diretorias</option>';
-  diretorias.forEach(d => {
-    select.innerHTML += `<option value="${d}">${d}</option>`;
-  });
-}
-
-function renderizarDashboard() {
-  let grid = document.getElementById("grid-main");
-  grid.innerHTML = "";
-
-  let filtroDir = document.getElementById("filtro-diretoria").value;
-  let busca = document.getElementById("busca-processo").value.toLowerCase();
-
-  let totalNotifGlobal = 0;
-  let totalFinalizadasGlobal = 0;
-  let totalAcoesGlobal = RESP.acoes.length;
-  let incidentesCriticosGlobal = 0;
-
-  Object.keys(processosProcessados).forEach(key => {
-    let p = procesosProcessados[key];
-    
-    // Contabilizações globais
-    totalNotifGlobal += p.notificacoes.length;
-    totalFinalizadasGlobal += p.notificacoes.filter(n => n.situacao === "Finalizada").length;
-    incidentesCriticosGlobal += p.notificacoes.filter(n => n.situacao !== "Finalizada").length;
-
-    // Aplica filtros de visualização
-    if (filtroDir !== "TODAS" && p.diretoria !== filtroDir) return;
-    if (busca && !p.nome.toLowerCase().includes(busca) && !p.responsavel.toLowerCase().includes(busca)) return;
-
-    // Separação de tipos de notificação para exibição rápida do card
-    let incidentes = p.notificacoes.filter(n => n.tipo === "Incidente").length;
-    let acidentes = p.notificacoes.filter(n => n.tipo === "Acidente de Trabalho").length;
-
-    // Determina a cor do velocímetro conforme a performance
-    let corGauges = "var(--accent-sport)";
-    if (p.score < 50) corGauges = "var(--danger)";
-    else if (p.score < 75) corGauges = "var(--warning)";
-
-    // Cálculo do offset do arco SVG do gráfico circular
-    let radius = 40;
-    let circumference = 2 * Math.PI * radius;
-    let offset = circumference - (p.score / 100) * circumference;
-
-    let cardHtml = `
-      <div class="card-processo" onclick="expandirProcesso('${p.nome}')">
-        <div class="card-header">
-          <div>
-            <div class="card-title">${p.nome}</div>
-            <div class="card-resp">${p.responsavel}</div>
-          </div>
-          <div class="gauge-container">
-            <svg class="gauge-svg">
-              <circle class="gauge-bg" cx="50" cy="50" r="40"/>
-              <circle class="gauge-fill" cx="50" cy="50" r="40" style="stroke-dashoffset: ${offset}; stroke: ${corGauges};"/>
-            </svg>
-            <div class="gauge-text" style="color: ${corGauges};">${p.score}%</div>
-          </div>
-        </div>
-        
-        <div class="card-body-metrics">
-          <div class="mini-metric">
-            <div class="m-label">Ações / Indicadores</div>
-            <div class="m-val">${p.acoes.length} ONA | ${p.indicadores.length} Ind.</div>
-          </div>
-          <div class="mini-metric">
-            <div class="m-label">Ocorrências (Inc / AT)</div>
-            <div class="m-val" style="color: ${p.notificacoes.length > 0 ? 'var(--warning)' : 'var(--text-main)'}">
-              ${incidentes} | ${acidentes}
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-    grid.innerHTML += cardHtml;
-  });
-
-  // Atualiza os KPIs Mestres do topo
-  document.getElementById("kpi-total-notif").innerText = totalNotifGlobal;
-  document.getElementById("kpi-ona-total").innerText = totalAcoesGlobal;
-  document.getElementById("kpi-incidentes-criticos").innerText = incidentesCriticosGlobal;
-  
-  let resolvGlobal = totalNotifGlobal > 0 ? Math.round((totalFinalizadasGlobal / totalNotifGlobal) * 100) : 100;
-  document.getElementById("kpi-resolv").innerText = resolvGlobal + "%";
-  document.getElementById("global-efficiency-badge").innerText = `TAXA GERAL DE EFICIÊNCIA: ${resolvGlobal}%`;
-}
-
-// MANAGEMENT DO MODAL EXPANSÍVEL
-let processoAberto = null;
-
-function expandirProcesso(nomeProcesso) {
-  processoAberto = processosProcessados[nomeProcesso];
-  if (!processoAberto) return;
-
-  document.getElementById("modal-processo-titulo").innerText = processoAberto.nome;
-  document.getElementById("modal-processo-gestor").innerText = `Responsável Setorial: ${processoAberto.responsavel} | ${processoAberto.diretoria}`;
-
-  // Popula Tabela ONA
-  let tbodyOna = document.querySelector("#table-ona-dados tbody");
-  tbodyOna.innerHTML = "";
-  if(processoAberto.acoes.length === 0) {
-    tbodyOna.innerHTML = "<tr><td colspan='4' style='color:var(--text-muted); text-align:center;'>Nenhuma ação ONA vinculada a este processo.</td></tr>";
-  } else {
-    processoAberto.acoes.forEach(a => {
-      let statusClass = a.status === "Concluída" ? "success" : "warning";
-      tbodyOna.innerHTML += `<tr>
-        <td>${a.titulo}</td>
-        <td>${a.plano}</td>
-        <td><progress value="${a.progresso}" max="1"></progress> ${(a.progresso*100)}%</td>
-        <td><span class="chip ${statusClass}">${a.status}</span></td>
-      </tr>`;
-    });
+  "Mylena Justino": {
+    "diretoria": "Diretoria Geral", "setores": ["PAM", "APGQ"],
+    "acoes": {"total": 8, "prog_geral": 75.5, "concluidas": 5, "em_andamento": 3, "nao_iniciada": 0, "atrasada": 0},
+    "indicadores": {"total_reg": 5, "dentro": 4, "fora": 1, "conformidade": 80.0},
+    "notificacoes": {"total": 3, "resolvidas": 3, "andamento": 0, "tx_resolucao": 100.0}
+  },
+  "Gestor Modelo (Demo)": {
+    "diretoria": "Diretoria Técnica", "setores": ["UTI", "Centro Cirúrgico"],
+    "acoes": {"total": 12, "prog_geral": 45.0, "concluidas": 4, "em_andamento": 8, "nao_iniciada": 0, "atrasada": 0},
+    "indicadores": {"total_reg": 10, "dentro": 5, "fora": 5, "conformidade": 50.0},
+    "notificacoes": {"total": 5, "resolvidas": 2, "andamento": 3, "tx_resolucao": 40.0}
   }
-
-  // Popula Tabela Indicadores
-  let tbodyInd = document.querySelector("#table-ind-dados tbody");
-  tbodyInd.innerHTML = "";
-  if(processoAberto.indicadores.length === 0) {
-    tbodyInd.innerHTML = "<tr><td colspan='4' style='color:var(--text-muted); text-align:center;'>Nenhum indicador monitorado neste processo.</td></tr>";
-  } else {
-    processoAberto.indicadores.forEach(i => {
-      let isEstrategico = i.indicator && i.indicator.includes("(Resultado)");
-      let statusClass = (i.status === "Dentro do Prazo" || i.status.includes("em dia")) ? "success" : "danger";
-      tbodyInd.innerHTML += `<tr>
-        <td>${i.indicador} ${isEstrategico ? '<strong style="color:var(--accent-sport)">[Estratégico]</strong>' : ''}</td>
-        <td>${i.tipo}</td>
-        <td>${i.data}</td>
-        <td><span class="chip ${statusClass}">${i.status}</span></td>
-      </tr>`;
-    });
-  }
-
-  // Popula Tabela Notificações
-  let tbodyNotif = document.querySelector("#table-notif-dados tbody");
-  tbodyNotif.innerHTML = "";
-  if(processoAberto.notificacoes.length === 0) {
-    tbodyNotif.innerHTML = "<tr><td colspan='4' style='color:var(--text-muted); text-align:center;'>Sem ocorrências ou notificações registradas.</td></tr>";
-  } else {
-    processoAberto.notificacoes.forEach(n => {
-      let sitClass = n.situacao === "Finalizada" ? "success" : "danger";
-      tbodyNotif.innerHTML += `<tr>
-        <td><code>${n.serial}</code></td>
-        <td>${n.titulo}</td>
-        <td>${n.classificacao}</td>
-        <td><span class="chip ${sitClass}">${n.situacao}</span></td>
-      </tr>`;
-    });
-  }
-
-  document.getElementById("detalhe-modal").style.display = "flex";
-}
-
-function trocarAbaModal(tabId, botao) {
-  document.querySelectorAll(".modal-tab-content").forEach(el => el.style.display = "none");
-  document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
-  
-  document.getElementById(tabId).style.display = "block";
-  botao.classList.add("active");
-}
-
-function fecharModal() {
-  document.getElementById("detalhe-modal").style.display = "none";
-}
-
-// Inicialização Automatizada ao carregar a página
-window.onload = function() {
-  processarDados();
-  renderizarDashboard();
 };
 </script>
+<div class="tv-header">
+  <div>
+    <h1>BRASILEIRÃO DA <span>QUALIDADE</span></h1>
+    <div style="font-size: 14px; color: #b0c4de; margin-top: 2px; font-weight: 700;">TEMPORADA ONA 2026 - PLACAR GERAL</div>
+  </div>
+  <div class="match-time" id="data-atual">90:00</div>
+</div>
 
+<div class="placar-global">
+  <div class="stat-box">
+    <div>
+      <div class="title">Posse Estratégica (Ações)</div>
+      <div style="font-size: 12px; opacity: 0.8; margin-top: 4px;">Plano Tático ONA</div>
+    </div>
+    <div class="value" id="tot-acoes">0</div>
+  </div>
+  <div class="stat-box">
+    <div>
+      <div class="title">Passes Certos (Ind. OK)</div>
+      <div style="font-size: 12px; opacity: 0.8; margin-top: 4px;">Conformidade Geral</div>
+    </div>
+    <div class="value" style="color: #39FF14;" id="tot-ind">0</div>
+  </div>
+  <div class="stat-box danger">
+    <div>
+      <div class="title">Cartões Vermelhos</div>
+      <div style="font-size: 12px; opacity: 0.8; margin-top: 4px;">Incidentes Pendentes</div>
+    </div>
+    <div class="value" style="color: var(--red-card);" id="tot-pendentes">0</div>
+  </div>
+</div>
+
+<div class="grid-campo" id="grid-campo">
+  </div>
+
+<script>
+  // Define a data atual no placar
+  const hoje = new Date();
+  document.getElementById('data-atual').innerText = hoje.toLocaleDateString('pt-BR');
+
+  function calcularScoreGeral(acoes, indicadores, notificacoes) {
+    // Calculo do "Aproveitamento do Time" (0 a 100)
+    let pesoAcoes = acoes.prog_geral || 0;
+    let pesoInd = indicadores.conformidade || 0;
+    let mediaTatica = (pesoAcoes + pesoInd) / 2; 
+    
+    // Penalidade grave se houver incidentes/notificações pendentes (Cartões vermelhos afetam o time)
+    let penalidade = notificacoes.andamento * 10;
+    let score = mediaTatica - penalidade;
+
+    return Math.max(0, Math.min(100, Math.round(score)));
+  }
+
+  function renderizarCards() {
+    const grid = document.getElementById('grid-campo');
+    grid.innerHTML = '';
+
+    let globalAcoes = 0;
+    let globalIndDentro = 0;
+    let globalPendentes = 0;
+
+    // Loop na estrutura de JSON que o Python envia
+    for (const [nomeGestor, dados] of Object.entries(RESP)) {
+      
+      // Alimentar Placar Global
+      globalAcoes += dados.acoes.total;
+      globalIndDentro += dados.indicadores.dentro;
+      globalPendentes += dados.notificacoes.andamento;
+
+      // Calcular Score
+      let score = calcularScoreGeral(dados.acoes, dados.indicadores, dados.notificacoes);
+      let corScore = score >= 75 ? '' : (score >= 50 ? 'media' : 'ruim');
+      
+      let nomeExibicao = nomeGestor === 'nan' ? 'Sem Gestor Definido' : nomeGestor;
+      let setoresExibicao = dados.setores.join(' / ') || 'Sem Setor';
+
+      let cardHTML = `
+        <div class="card-jogador">
+          <div class="cj-header">
+            <div>
+              <div class="cj-nome">${nomeExibicao}</div>
+              <div class="cj-setor">${dados.diretoria} • ${setoresExibicao}</div>
+            </div>
+            <div class="badge-nota ${corScore}">${score}</div>
+          </div>
+          
+          <div class="cj-body">
+            
+            <div class="linha-stat">
+              <div class="ls-header">
+                <span>🎯 Tática ONA (Progresso)</span>
+                <span>${dados.acoes.prog_geral}%</span>
+              </div>
+              <div class="bar-bg">
+                <div class="bar-fill" style="width: ${dados.acoes.prog_geral}%;"></div>
+              </div>
+              <div style="font-size: 11px; color:#aaa; margin-top:3px; text-align:right;">
+                ${dados.acoes.concluidas} de ${dados.acoes.total} Concluídas
+              </div>
+            </div>
+
+            <div class="linha-stat" style="margin-top:15px;">
+              <div class="ls-header">
+                <span>⚽ Passes Certos (Indicadores)</span>
+                <span>${dados.indicadores.conformidade}%</span>
+              </div>
+              <div class="bar-bg">
+                <div class="bar-fill green" style="width: ${dados.indicadores.conformidade}%;"></div>
+              </div>
+              <div style="font-size: 11px; color:#aaa; margin-top:3px; text-align:right;">
+                ${dados.indicadores.dentro} OK / ${dados.indicadores.fora} Fora
+              </div>
+            </div>
+
+            <div class="painel-faltas">
+              <div>
+                <div style="font-size: 11px; color:#aaa; text-transform:uppercase;">Notificações Pendentes</div>
+                <div style="font-size: 18px; font-weight:900; display:flex; align-items:center; margin-top:4px;">
+                  <span class="cartao-icone"></span> ${dados.notificacoes.andamento} 
+                  <span style="font-size: 12px; font-weight:400; margin-left: 10px; color:#888;">(De ${dados.notificacoes.total} totais)</span>
+                </div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size: 11px; color:#aaa; text-transform:uppercase;">Resolutividade</div>
+                <div style="font-size: 18px; font-weight:900; color: ${dados.notificacoes.tx_resolucao >= 80 ? '#39FF14' : 'var(--br-yellow)'};">
+                  ${dados.notificacoes.tx_resolucao}%
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      `;
+
+      grid.innerHTML += cardHTML;
+    }
+
+    // Atualiza placar mestre lá em cima
+    document.getElementById('tot-acoes').innerText = globalAcoes;
+    document.getElementById('tot-ind').innerText = globalIndDentro;
+    document.getElementById('tot-pendentes').innerText = globalPendentes;
+  }
+
+  // Inicia renderização ao carregar
+  window.onload = () => {
+    if(Object.keys(RESP).length > 0) {
+      renderizarCards();
+    } else {
+      document.getElementById('grid-campo').innerHTML = '<h3 style="color:#aaa;">Nenhum dado recebido do Python ainda. Faça o upload no Streamlit.</h3>';
+    }
+  };
+</script>
 </body>
 </html>
