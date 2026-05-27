@@ -3,6 +3,7 @@ import gzip
 import json
 import re
 import unicodedata
+from difflib import SequenceMatcher
 from datetime import datetime
 from pathlib import Path
 
@@ -24,9 +25,21 @@ Path(OUTPUT_FOLDER).mkdir(exist_ok=True)
 # =====================================================
 
 def limpar_texto(valor):
+    """Limpa valores vindos do Excel.
+
+    Também remove marcadores técnicos que costumam virar responsáveis
+    inválidos no dashboard, como 0, 0.0, nan, n/d e traços.
+    """
     if pd.isna(valor):
         return ""
-    return str(valor).strip()
+
+    texto = str(valor).strip()
+    texto_limpo = texto.upper().replace(".", "").replace(" ", "")
+
+    if texto_limpo in {"", "0", "00", "NAN", "N/D", "ND", "NA", "NONE", "NULL", "-"}:
+        return ""
+
+    return texto
 
 
 def normalizar_chave(valor):
@@ -137,6 +150,71 @@ def data_texto(valor):
     return data.strftime("%d/%m/%Y")
 
 
+
+# =====================================================
+# ALIASES DE PROCESSOS
+# =====================================================
+
+ALIAS_PROCESSOS = {
+    # Pronto atendimento / pronto socorro
+    "PS - PRONTO ATENDIMENTO ADULTO": "P.S - PRONTO SOCORRO",
+    "PS - PRONTO SOCORRO ADULTO": "P.S - PRONTO SOCORRO",
+    "PRONTO ATENDIMENTO ADULTO": "P.S - PRONTO SOCORRO",
+    "PRONTO SOCORRO ADULTO": "P.S - PRONTO SOCORRO",
+
+    # UTI
+    "UTI - UNIDADE DE TERAPIA INTENSIVA": "UTI - UNIDADE TERAPIA INTENSIVA ADULTO",
+    "UTI - UNIDADE DE TERAPIA INTENSIVA ADULTO": "UTI - UNIDADE TERAPIA INTENSIVA ADULTO",
+    "UNIDADE DE TERAPIA INTENSIVA": "UTI - UNIDADE TERAPIA INTENSIVA ADULTO",
+    "UNIDADE DE TERAPIA INTENSIVA ADULTO": "UTI - UNIDADE TERAPIA INTENSIVA ADULTO",
+
+    # Gineco obstétrica / centro obstétrico
+    "UNIDADE DE INTERNACAO GINECO OBSTETRICA": "CGO - UNIDADE DE INTERNACAO GINECOBSTETRICA",
+    "UI GINECO OBSTETRICA": "CGO - UNIDADE DE INTERNACAO GINECOBSTETRICA",
+    "CO - CENTRO OBSTETRICO": "CGO - UNIDADE DE INTERNACAO GINECOBSTETRICA",
+    "CENTRO OBSTETRICO": "CGO - UNIDADE DE INTERNACAO GINECOBSTETRICA",
+
+    # NIR
+    "NIR - NUCLEO DE REGULACAO INTERNO": "NIR - NUCLEO INTERNO DE REGULACAO",
+    "NUCLEO DE REGULACAO INTERNO": "NIR - NUCLEO INTERNO DE REGULACAO",
+
+    # Laboratório
+    "UNIDADES DE ANALISES CLINICAS": "LAB - UNIDADE DE ANALISES CLINICAS",
+    "UNIDADE DE ANALISES CLINICAS": "LAB - UNIDADE DE ANALISES CLINICAS",
+
+    # Processamento de roupas
+    "SRP - SETOR DE PROCESSAMENTO DE ROUPAS": "SPR - SETOR DE PROCESSAMENTO DE ROUPAS",
+    "SPR - SERVICO DE PROCESSAMENTO DE ROUPAS": "SPR - SETOR DE PROCESSAMENTO DE ROUPAS",
+    "SERVICO DE PROCESSAMENTO DE ROUPAS": "SPR - SETOR DE PROCESSAMENTO DE ROUPAS",
+
+    # Administrativo
+    "SETOR DE FATURAMENTO": "FAT - FATURAMENTO",
+    "FATURAMENTO": "FAT - FATURAMENTO",
+    "SETOR DE SUPRIMENTOS": "SUP - SUPRIMENTOS",
+    "SUPRIMENTOS": "SUP - SUPRIMENTOS",
+    "SETOR DE PATRIMONIO": "PAT - PATRIMONIO",
+    "PATRIMONIO": "PAT - PATRIMONIO",
+    "DIRETORIA ADMINISTRATIVA/ FINANCEIRA": "DAF - DIRETORIA ADMINISTRATIVA/FINANCEIRA",
+    "DIRETORIA ADMINISTRATIVA/FINANCEIRA": "DAF - DIRETORIA ADMINISTRATIVA/FINANCEIRA",
+
+    # Facilities / tecnologia / apoio
+    "SHL - SERVICO DE HIGIENIZACAO E LIMPEZA": "SHL - SETOR DE HIGIENIZACAO E LIMPEZA",
+    "SERVICO DE HIGIENIZACAO E LIMPEZA": "SHL - SETOR DE HIGIENIZACAO E LIMPEZA",
+    "OPME - ORTESES PROTESES E MATERIAIS ESPECIAIS": "OPME - ORTESE PROTESE E MATERIAIS ESPECIAIS",
+    "TI - SERVICO DE TECNOLOGIA DA INFORMACAO E COMUNICACAO": "TI - SERVICO DE TECNOLOGIA DE INFORMACAO",
+    "SERVICO DE TECNOLOGIA DE INFORMACAO E COMUNICACAO": "TI - SERVICO DE TECNOLOGIA DE INFORMACAO",
+    "SETOR DE TRANSPORTE": "STP - SERVICO DE TRANSPORTE DE PACIENTE",
+    "TRANSPORTE": "STP - SERVICO DE TRANSPORTE DE PACIENTE",
+
+    # Psicologia
+    "PSICC - PSICOLOGIA CLINICA": "PSICC- PSICOLOGIA CLINICA",
+    "PSIC - PSICOLOGIA CLINICA": "PSICC- PSICOLOGIA CLINICA",
+
+    # Hotelaria sem setor específico no organograma: mapeia para Facilities
+    "COORDENACAO DE HOTELARIA": "COORDENACAO DE FACILITIES",
+}
+
+
 # =====================================================
 # CARREGAMENTO DO EXCEL
 # =====================================================
@@ -167,28 +245,111 @@ def montar_mapa_organograma(organograma):
         return mapa
 
     col_setor = obter_coluna(organograma, ["SETOR", "Setor", "Processo", "Processo Notificado"], False)
-    col_resp = obter_coluna(organograma, ["Responsável pelo Setor", "Responsavel pelo Setor", "Responsável", "Responsavel"], False)
+    col_resp_setor = obter_coluna(organograma, ["Responsável pelo Setor", "Responsavel pelo Setor", "Responsável", "Responsavel"], False)
     col_dir = obter_coluna(organograma, ["Diretoria", "Direção", "Direcao"], False)
-    col_ger = obter_coluna(organograma, ["Gerência", "Gerencia", "Coordenação", "Coordenacao", "Área", "Area"], False)
+    col_ger = obter_coluna(organograma, ["GERÊNCIA OU COORDENAÇÃO", "Gerência", "Gerencia", "Coordenação", "Coordenacao", "Área", "Area"], False)
+    col_resp_ger = obter_coluna(
+        organograma,
+        [
+            "Responsavel pela gerência ou coordenação",
+            "Responsável pela gerência ou coordenação",
+            "Responsavel pela Gerência ou Coordenação",
+            "Responsável pela Gerência ou Coordenação",
+        ],
+        False
+    )
 
-    if not col_setor or not col_resp:
-        return mapa
+    def adicionar_chave(chave, setor, responsavel, diretoria, gerencia):
+        chave_limpa = limpar_texto(chave)
+        responsavel_limpo = limpar_texto(responsavel)
 
-    for _, row in organograma.iterrows():
-        setor = limpar_texto(row.get(col_setor, ""))
-        resp = limpar_texto(row.get(col_resp, ""))
+        if not chave_limpa or not responsavel_limpo:
+            return
 
-        if not setor or not resp:
-            continue
-
-        mapa[normalizar_chave(setor)] = {
-            "setor": setor,
-            "responsavel": resp,
-            "diretoria": limpar_texto(row.get(col_dir, "")) if col_dir else "",
-            "gerencia": limpar_texto(row.get(col_ger, "")) if col_ger else ""
+        mapa[normalizar_chave(chave_limpa)] = {
+            "setor": limpar_texto(setor) or chave_limpa,
+            "responsavel": responsavel_limpo,
+            "diretoria": limpar_texto(diretoria),
+            "gerencia": limpar_texto(gerencia)
         }
 
+    for _, row in organograma.iterrows():
+        setor = limpar_texto(row.get(col_setor, "")) if col_setor else ""
+        resp_setor = limpar_texto(row.get(col_resp_setor, "")) if col_resp_setor else ""
+        diretoria = limpar_texto(row.get(col_dir, "")) if col_dir else ""
+        gerencia = limpar_texto(row.get(col_ger, "")) if col_ger else ""
+        resp_ger = limpar_texto(row.get(col_resp_ger, "")) if col_resp_ger else ""
+
+        # Mapa principal: SETOR -> responsável pelo setor
+        adicionar_chave(setor, setor, resp_setor, diretoria, gerencia)
+
+        # Mapa complementar: GERÊNCIA/COORDENAÇÃO -> responsável pela gerência/coordenação
+        # Isso corrige notificações cujo "Processo Notificado" vem como gerência, e não como setor.
+        adicionar_chave(gerencia, gerencia, resp_ger, diretoria, gerencia)
+
+    # Aliases oficiais para nomes que aparecem na aba NOTIFICAÇÕES com variação textual.
+    for origem, destino in ALIAS_PROCESSOS.items():
+        origem_norm = normalizar_chave(origem)
+        destino_norm = normalizar_chave(destino)
+
+        if destino_norm in mapa:
+            mapa[origem_norm] = mapa[destino_norm]
+
     return mapa
+
+def base_processo(valor):
+    """Cria uma chave menos rígida para comparar processos/setores.
+
+    Exemplo:
+    "PS - Pronto Atendimento Adulto" -> "PRONTO ATENDIMENTO ADULTO"
+    "Unidade de Internação Gineco Obstétrica" -> "UNIDADE INTERNACAO GINECO OBSTETRICA"
+    """
+    texto = normalizar_chave(valor)
+
+    if " - " in texto:
+        partes = [p.strip() for p in texto.split(" - ") if p.strip()]
+        if len(partes) > 1:
+            texto = partes[-1]
+
+    remover = [
+        "SETOR DE ", "SERVICO DE ", "SERVIÇO DE ", "UNIDADE DE ",
+        "GERENCIA DE ", "GERÊNCIA DE ", "COORDENACAO DE ", "COORDENAÇÃO DE ",
+        "NUCLEO DE ", "NÚCLEO DE ", "PROCESSO ", "AREA DE ", "ÁREA DE "
+    ]
+
+    for termo in remover:
+        texto = texto.replace(termo, "")
+
+    texto = re.sub(r"\b(DA|DE|DO|DAS|DOS|E)\b", " ", texto)
+    texto = re.sub(r"\s+", " ", texto).strip()
+    return texto
+
+
+def similaridade_processo(a, b):
+    a = base_processo(a)
+    b = base_processo(b)
+
+    if not a or not b:
+        return 0
+
+    if a == b:
+        return 1
+
+    if a in b or b in a:
+        return 0.95
+
+    tokens_a = set(a.split())
+    tokens_b = set(b.split())
+
+    if not tokens_a or not tokens_b:
+        return 0
+
+    inter = len(tokens_a & tokens_b)
+    uniao = len(tokens_a | tokens_b)
+    token_score = inter / uniao
+    seq_score = SequenceMatcher(None, a, b).ratio()
+
+    return max(token_score, seq_score)
 
 
 def buscar_no_organograma(valor, mapa_org):
@@ -200,12 +361,48 @@ def buscar_no_organograma(valor, mapa_org):
     if chave in mapa_org:
         return mapa_org[chave]
 
+    alias = ALIAS_PROCESSOS.get(chave)
+
+    if alias:
+        alias_norm = normalizar_chave(alias)
+
+        if alias_norm in mapa_org:
+            return mapa_org[alias_norm]
+
+    base = base_processo(chave)
+
+    # Correspondência por base simplificada.
     for chave_org, dados in mapa_org.items():
+        if base and base == base_processo(chave_org):
+            return dados
+
+    # Correspondência por inclusão, útil para siglas + descrição.
+    for chave_org, dados in mapa_org.items():
+        base_org = base_processo(chave_org)
+
         if chave in chave_org or chave_org in chave:
             return dados
 
-    return None
+        if base and (base in base_org or base_org in base):
+            return dados
 
+    # Fuzzy matching com corte moderado.
+    # A lista de aliases acima cobre os casos críticos; este corte evita a criação de
+    # "PROCESSO NÃO MAPEADO" por pequenas variações textuais.
+    melhor = None
+    melhor_score = 0
+
+    for chave_org, dados in mapa_org.items():
+        score = similaridade_processo(chave, chave_org)
+
+        if score > melhor_score:
+            melhor_score = score
+            melhor = dados
+
+    if melhor_score >= 0.76:
+        return melhor
+
+    return None
 
 def detectar_diretoria(setor, diretoria_org=""):
     if diretoria_org:
@@ -252,7 +449,11 @@ def classificar_prazo_acao(row, col_status, col_fim_prev, col_fim_real):
         return "CONCLUÍDA NO PRAZO"
 
     if "NAO INICI" in status_norm or "NÃO INICI" in status_norm:
-        return "ATRASADA" if fim_prev is not None and fim_prev < hoje else "NÃO INICIADA"
+        if fim_prev is not None and fim_prev < hoje:
+            return "ATRASADA"
+        if fim_prev is not None and fim_prev >= hoje:
+            return "FUTURA"
+        return "NÃO INICIADA"
 
     if "ATRAS" in status_norm:
         return "ATRASADA"
@@ -451,11 +652,15 @@ def processar_acoes(acoes, resultado, detalhes, mapa_org):
         elif prazo == "FUTURA":
             item["acoes"]["futura"] += 1
 
-        acumulador[responsavel]["peso_total"] += peso
-        acumulador[responsavel]["prog_ponderado"] += progresso * peso
-        acumulador[responsavel]["tipo_peso"].setdefault(tipo or "Não informado", {"peso": 0.0, "prog": 0.0})
-        acumulador[responsavel]["tipo_peso"][tipo or "Não informado"]["peso"] += peso
-        acumulador[responsavel]["tipo_peso"][tipo or "Não informado"]["prog"] += progresso * peso
+        # Ações futuras não entram no cálculo do score, para evitar
+        # porcentagens zeradas por planos que ainda não chegaram ao prazo.
+        # Elas continuam visíveis no modal e nos contadores.
+        if prazo != "FUTURA":
+            acumulador[responsavel]["peso_total"] += peso
+            acumulador[responsavel]["prog_ponderado"] += progresso * peso
+            acumulador[responsavel]["tipo_peso"].setdefault(tipo or "Não informado", {"peso": 0.0, "prog": 0.0})
+            acumulador[responsavel]["tipo_peso"][tipo or "Não informado"]["peso"] += peso
+            acumulador[responsavel]["tipo_peso"][tipo or "Não informado"]["prog"] += progresso * peso
 
         detalhes.setdefault(responsavel, {"acoes": [], "indicadores": [], "notificacoes": []})
         detalhes[responsavel]["acoes"].append({
@@ -472,12 +677,21 @@ def processar_acoes(acoes, resultado, detalhes, mapa_org):
 
     for responsavel, dados in acumulador.items():
         item = resultado[responsavel]
-        prog = dados["prog_ponderado"] / dados["peso_total"] if dados["peso_total"] > 0 else 0
-        total = max(item["acoes"]["total"], 1)
-        penalidade = ((item["acoes"]["atrasada"] / total) * 25) + ((item["acoes"]["nao_iniciada"] / total) * 10)
-
-        item["acoes"]["prog_geral"] = limitar(prog)
-        item["a_score"] = limitar(prog - penalidade)
+        if dados["peso_total"] > 0:
+            prog = dados["prog_ponderado"] / dados["peso_total"]
+            total_ativo = max(
+                item["acoes"]["total"] - item["acoes"]["futura"],
+                1
+            )
+            penalidade = (
+                (item["acoes"]["atrasada"] / total_ativo) * 25
+                + (item["acoes"]["nao_iniciada"] / total_ativo) * 10
+            )
+            item["acoes"]["prog_geral"] = limitar(prog)
+            item["a_score"] = limitar(prog - penalidade)
+        else:
+            item["acoes"]["prog_geral"] = None
+            item["a_score"] = None
 
         prog_tipo = {}
         for tipo, dados_tipo in dados["tipo_peso"].items():
@@ -588,15 +802,14 @@ def processar_indicadores(indicadores, resultado, detalhes, mapa_org):
 # PROCESSAMENTO DE NOTIFICAÇÕES
 # =====================================================
 
-def processar_notificacoes(notificacoes, resultado, detalhes, mapa_org):
+def processar_notificacoes(notificacoes, resultado, detalhes, mapa_org, diagnosticos):
     """
     Regra oficial:
     - Notificações são vinculadas SOMENTE pelo campo "Processo Notificado".
     - O campo "Responsável" da aba NOTIFICAÇÕES não é usado para atribuição.
-    - Quando o Processo Notificado existe no Organograma, a notificação entra para o
-      responsável do setor/processo mapeado no Organograma.
-    - Quando o processo não existe no Organograma, a notificação fica em um grupo
-      técnico chamado "PROCESSO NÃO MAPEADO: <processo>", evitando atribuição indevida.
+    - Quando o processo não existe no Organograma, a ocorrência NÃO entra no ranking
+      de responsáveis. Ela vai para diagnosticos["processos_nao_mapeados"].
+      Isso evita linhas como "PROCESSO NÃO MAPEADO: ..." distorcendo o dashboard.
     """
 
     if notificacoes.empty:
@@ -608,7 +821,7 @@ def processar_notificacoes(notificacoes, resultado, detalhes, mapa_org):
     col_situacao = obter_coluna(notificacoes, ["Situação", "Situacao", "Status"], False)
     col_tipo = obter_coluna(notificacoes, ["Tipo"], False)
     col_classif = obter_coluna(notificacoes, ["Classificação Incidente", "Classificacao Incidente", "Classificação", "Classificacao"], False)
-    col_data = obter_coluna(notificacoes, ["Data", "Data da Notificação", "Data da Notificacao"], False)
+    col_data = obter_coluna(notificacoes, ["Data", "Data da Notificação", "Data da Notificacao", "Criado em"], False)
 
     if not col_processo:
         raise KeyError(
@@ -621,33 +834,70 @@ def processar_notificacoes(notificacoes, resultado, detalhes, mapa_org):
         processo_original = limpar_texto(row.get(col_processo, ""))
         processo = processo_original or "NÃO INFORMADO"
 
-        # PONTO-CHAVE: usa apenas Processo Notificado para encontrar o dono do processo.
-        # Não usa o campo Responsável da notificação.
         dados_org = buscar_no_organograma(processo, mapa_org)
 
-        if dados_org:
-            responsavel = dados_org.get("responsavel", "") or f"PROCESSO NÃO MAPEADO: {processo}"
-            setor = dados_org.get("setor", processo) or processo
-            dir_org = dados_org.get("diretoria", "")
-            ger_org = dados_org.get("gerencia", "")
-        else:
-            responsavel = f"PROCESSO NÃO MAPEADO: {processo}"
-            setor = processo
-            dir_org = "Diretoria Geral"
-            ger_org = "Processo não encontrado no Organograma"
+        situacao = limpar_texto(row.get(col_situacao, "")) if col_situacao else ""
+        tipo = limpar_texto(row.get(col_tipo, "")) if col_tipo else ""
+        classif = limpar_texto(row.get(col_classif, "")) if col_classif else ""
+        resolvida = notificacao_resolvida(situacao)
+        andamento = notificacao_em_andamento(situacao)
+        peso = peso_notificacao(row, col_tipo, col_classif)
+
+        detalhe_notificacao = {
+            "titulo": limpar_texto(row.get(col_titulo, "")) if col_titulo else "",
+            "serial": limpar_texto(row.get(col_serial, "")) if col_serial else "",
+            "tipo": tipo,
+            "situacao": situacao,
+            "classif": classif,
+            "proc": processo,
+            "data": data_texto(row.get(col_data, "")) if col_data else ""
+        }
+
+        # Não mapeado: não atribui a responsável nenhum.
+        if not dados_org:
+            chave_proc = processo or "NÃO INFORMADO"
+            diag = diagnosticos["processos_nao_mapeados"].setdefault(chave_proc, {
+                "processo": chave_proc,
+                "total": 0,
+                "resolvidas": 0,
+                "andamento": 0,
+                "novas": 0,
+                "exemplos": []
+            })
+            diag["total"] += 1
+            if resolvida:
+                diag["resolvidas"] += 1
+            elif andamento:
+                diag["andamento"] += 1
+            else:
+                diag["novas"] += 1
+            if len(diag["exemplos"]) < 5:
+                diag["exemplos"].append(detalhe_notificacao)
+            continue
+
+        responsavel = limpar_texto(dados_org.get("responsavel", ""))
+
+        # Se o organograma tem processo mas não tem responsável válido, também não entra no ranking.
+        if not responsavel:
+            chave_proc = processo or "NÃO INFORMADO"
+            diag = diagnosticos["processos_sem_responsavel"].setdefault(chave_proc, {
+                "processo": chave_proc,
+                "total": 0,
+                "exemplos": []
+            })
+            diag["total"] += 1
+            if len(diag["exemplos"]) < 5:
+                diag["exemplos"].append(detalhe_notificacao)
+            continue
+
+        setor = dados_org.get("setor", processo) or processo
+        dir_org = dados_org.get("diretoria", "")
+        ger_org = dados_org.get("gerencia", "")
 
         item = obter_resp(resultado, responsavel, setor=setor, diretoria=dir_org, gerencia=ger_org)
 
         if responsavel not in acumulador:
             acumulador[responsavel] = {"peso_total": 0.0, "peso_resolvido": 0.0, "score_sev": 0.0}
-
-        situacao = limpar_texto(row.get(col_situacao, "")) if col_situacao else ""
-        tipo = limpar_texto(row.get(col_tipo, "")) if col_tipo else ""
-        classif = limpar_texto(row.get(col_classif, "")) if col_classif else ""
-
-        resolvida = notificacao_resolvida(situacao)
-        andamento = notificacao_em_andamento(situacao)
-        peso = peso_notificacao(row, col_tipo, col_classif)
 
         item["notificacoes"]["total"] += 1
         acumulador[responsavel]["peso_total"] += peso
@@ -693,15 +943,7 @@ def processar_notificacoes(notificacoes, resultado, detalhes, mapa_org):
             item["notificacoes"]["sem_dano"] += 1
 
         detalhes.setdefault(responsavel, {"acoes": [], "indicadores": [], "notificacoes": []})
-        detalhes[responsavel]["notificacoes"].append({
-            "titulo": limpar_texto(row.get(col_titulo, "")) if col_titulo else "",
-            "serial": limpar_texto(row.get(col_serial, "")) if col_serial else "",
-            "tipo": tipo,
-            "situacao": situacao,
-            "classif": classif,
-            "proc": processo,
-            "data": data_texto(row.get(col_data, "")) if col_data else ""
-        })
+        detalhes[responsavel]["notificacoes"].append(detalhe_notificacao)
 
     for responsavel, dados in acumulador.items():
         item = resultado[responsavel]
@@ -862,18 +1104,42 @@ def montar_diretorias(resultado):
 # PROCESSAMENTO PRINCIPAL
 # =====================================================
 
+def limpar_resultado_vazio(resultado, detalhes):
+    remover = []
+
+    for nome, dados in resultado.items():
+        nome_norm = normalizar_chave(nome)
+        total_linhas = (
+            dados["acoes"]["total"]
+            + dados["indicadores"]["total_reg"]
+            + dados["notificacoes"]["total"]
+        )
+
+        if total_linhas == 0 or nome_norm in {"", "0", "NAN", "NAO DEFINIDO", "NÃO DEFINIDO"}:
+            remover.append(nome)
+
+    for nome in remover:
+        resultado.pop(nome, None)
+        detalhes.pop(nome, None)
+
+
 def processar_dados(acoes, indicadores, notificacoes, organograma):
     mapa_org = montar_mapa_organograma(organograma)
     resultado = {}
     detalhes = {}
+    diagnosticos = {
+        "processos_nao_mapeados": {},
+        "processos_sem_responsavel": {}
+    }
 
     processar_acoes(acoes, resultado, detalhes, mapa_org)
     processar_indicadores(indicadores, resultado, detalhes, mapa_org)
-    processar_notificacoes(notificacoes, resultado, detalhes, mapa_org)
+    processar_notificacoes(notificacoes, resultado, detalhes, mapa_org, diagnosticos)
+    limpar_resultado_vazio(resultado, detalhes)
     calcular_score_final(resultado)
     diretorias = montar_diretorias(resultado)
 
-    return resultado, diretorias, detalhes
+    return resultado, diretorias, detalhes, diagnosticos
 
 
 # =====================================================
@@ -958,7 +1224,7 @@ if arquivo:
     try:
         with st.spinner("Processando dashboard..."):
             acoes, indicadores, notificacoes, organograma = carregar_excel(arquivo)
-            dados, diretorias, detalhes = processar_dados(acoes, indicadores, notificacoes, organograma)
+            dados, diretorias, detalhes, diagnosticos = processar_dados(acoes, indicadores, notificacoes, organograma)
             html_final = atualizar_html(TEMPLATE_HTML, dados, diretorias, detalhes)
 
             nome_saida = f"dashboard_{datetime.now().strftime('%Y_%m_%d_%H_%M')}.html"
@@ -987,7 +1253,38 @@ if arquivo:
             st.write("Primeiros responsáveis gerados:")
             st.json(list(dados.keys())[:10])
 
+            nao_mapeados = list(diagnosticos.get("processos_nao_mapeados", {}).values())
+            sem_responsavel = list(diagnosticos.get("processos_sem_responsavel", {}).values())
+
+            st.write(f"Processos notificados não mapeados no organograma: {len(nao_mapeados)}")
+            if nao_mapeados:
+                st.dataframe(
+                    pd.DataFrame([
+                        {
+                            "Processo Notificado": x["processo"],
+                            "Total de notificações": x["total"],
+                            "Resolvidas": x.get("resolvidas", 0),
+                            "Em andamento": x.get("andamento", 0),
+                            "Novas/Pendentes": x.get("novas", 0),
+                        }
+                        for x in nao_mapeados
+                    ]).sort_values("Total de notificações", ascending=False),
+                    use_container_width=True
+                )
+
+            st.write(f"Processos do organograma sem responsável válido: {len(sem_responsavel)}")
+            if sem_responsavel:
+                st.dataframe(
+                    pd.DataFrame([
+                        {
+                            "Processo": x["processo"],
+                            "Total de notificações": x["total"],
+                        }
+                        for x in sem_responsavel
+                    ]).sort_values("Total de notificações", ascending=False),
+                    use_container_width=True
+                )
+
     except Exception as erro:
         st.error("Erro ao processar o dashboard.")
         st.exception(erro)
-
