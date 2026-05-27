@@ -626,8 +626,17 @@ function filteredEntries(){
   const t=TEAMS[curTeam];
   const q=(document.getElementById('search').value||'').toLowerCase().trim();
   const f=document.getElementById('filt').value;
-  let entries = Object.entries(DATA).filter(([,d])=>d.diretoria===t.dir);
-  if(q)entries=entries.filter(([n])=>n.toLowerCase().includes(q));
+
+  // Cada aba deve mostrar somente a diretoria correspondente.
+  // Time Geral NÃO é "todos"; é apenas Diretoria Geral.
+  let entries = Object.entries(DATA).filter(([,d])=>{
+    return String(d.diretoria || '').trim() === String(t.dir || '').trim();
+  });
+
+  if(q)entries=entries.filter(([n,d])=>{
+    const texto = `${n} ${d.gerencia || ''} ${(d.setores || []).join(' ')}`.toLowerCase();
+    return texto.includes(q);
+  });
   if(f==='at')   entries=entries.filter(([,d])=>d.acoes.atrasada>0);
   else if(f==='ni')       entries=entries.filter(([,d])=>d.acoes.nao_iniciada>0);
   else if(f==='ind_fora') entries=entries.filter(([,d])=>d.indicadores.ind_prob>0);
