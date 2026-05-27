@@ -453,10 +453,24 @@ function normalizeResp(raw){
     const ind = d.indicadores || {};
     const nf = d.notificacoes || {};
 
-    const aScore = num(d.a_score ?? perf.acoes ?? ac.prog_geral ?? 0);
-    const iScore = num(d.i_score ?? perf.indicadores ?? ind.conformidade_pond ?? ind.conformidade ?? 0);
-    const nScore = num(d.n_score ?? perf.resolutividade ?? nf.resolutividade ?? nf.tx_resolucao_peso ?? nf.tx_resolucao ?? 100);
-    const score = num(d.score ?? d.score_geral ?? ((aScore*0.45)+(iScore*0.35)+(nScore*0.20)));
+    const temAcoes = num(ac.total, 0) > 0;
+    const temIndicadores = num(ind.total_reg ?? ind.total ?? ind.inds_unicos, 0) > 0;
+    const temNotificacoes = num(nf.total, 0) > 0;
+
+    const aScore = temAcoes ? num(d.a_score ?? perf.acoes ?? ac.prog_geral ?? 0) : null;
+    const iScore = temIndicadores ? num(d.i_score ?? perf.indicadores ?? ind.conformidade_pond ?? ind.conformidade ?? 0) : null;
+    const nScore = temNotificacoes ? num(d.n_score ?? perf.resolutividade ?? nf.resolutividade ?? nf.tx_resolucao_peso ?? nf.tx_resolucao ?? 100) : null;
+
+    const componentes = [];
+    if(aScore !== null) componentes.push([aScore, 0.45]);
+    if(iScore !== null) componentes.push([iScore, 0.35]);
+    if(nScore !== null) componentes.push([nScore, 0.20]);
+
+    const scoreCalculado = componentes.length
+      ? componentes.reduce((s,x)=>s+(x[0]*x[1]),0) / componentes.reduce((s,x)=>s+x[1],0)
+      : 0;
+
+    const score = num(d.score ?? d.score_geral ?? scoreCalculado);
 
     out[nome] = {
       ...d,
@@ -990,4 +1004,3 @@ render();
 </script>
 </body>
 </html>
-
