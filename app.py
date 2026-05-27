@@ -1100,22 +1100,82 @@ def montar_diretorias(resultado):
     return diretorias
 
 
+
+def inicializar_responsaveis_do_organograma(resultado, detalhes, organograma):
+    """Garante que todo responsável oficial do Organograma exista no RESP.
+
+    Antes, o dashboard só criava responsáveis quando havia ação, indicador
+    ou notificação vinculada. Por isso responsáveis oficiais podiam ficar
+    ausentes da listagem quando não tinham linha em uma das bases ou quando
+    a linha ainda não tinha sido vinculada.
+    """
+    if organograma.empty:
+        return
+
+    col_setor = obter_coluna(organograma, ["SETOR", "Setor", "Processo"], False)
+    col_resp_setor = obter_coluna(
+        organograma,
+        ["Responsável pelo Setor", "Responsavel pelo Setor", "Responsável", "Responsavel"],
+        False
+    )
+    col_dir = obter_coluna(organograma, ["Diretoria", "Direção", "Direcao"], False)
+    col_ger = obter_coluna(
+        organograma,
+        ["GERÊNCIA OU COORDENAÇÃO", "Gerência", "Gerencia", "Coordenação", "Coordenacao"],
+        False
+    )
+
+    if not col_resp_setor:
+        return
+
+    for _, row in organograma.iterrows():
+        responsavel = limpar_texto(row.get(col_resp_setor, ""))
+        if not responsavel:
+            continue
+
+        setor = limpar_texto(row.get(col_setor, "")) if col_setor else ""
+        diretoria = limpar_texto(row.get(col_dir, "")) if col_dir else ""
+        gerencia = limpar_texto(row.get(col_ger, "")) if col_ger else ""
+
+        item = obter_resp(
+            resultado,
+            responsavel,
+            setor=setor,
+            diretoria=diretoria,
+            gerencia=gerencia
+        )
+
+        # Marcador interno para diferenciar responsável oficial de lixo técnico.
+        item["_oficial_organograma"] = True
+
+        detalhes.setdefault(
+            responsavel,
+            {
+                "acoes": [],
+                "indicadores": [],
+                "notificacoes": []
+            }
+        )
+
+
 # =====================================================
 # PROCESSAMENTO PRINCIPAL
 # =====================================================
 
 def limpar_resultado_vazio(resultado, detalhes):
+    """Remove apenas nomes inválidos.
+
+    Não remove responsáveis oficiais do Organograma, mesmo quando ainda não
+    possuem ações/indicadores/notificações no mês. Isso garante que nomes
+    como Saymom, Nicollas, Nayara Seda e outros responsáveis oficiais nunca
+    desapareçam do dashboard por ausência de lançamento.
+    """
     remover = []
 
     for nome, dados in resultado.items():
         nome_norm = normalizar_chave(nome)
-        total_linhas = (
-            dados["acoes"]["total"]
-            + dados["indicadores"]["total_reg"]
-            + dados["notificacoes"]["total"]
-        )
 
-        if total_linhas == 0 or nome_norm in {"", "0", "NAN", "NAO DEFINIDO", "NÃO DEFINIDO"}:
+        if nome_norm in {"", "0", "NAN", "NAO DEFINIDO", "NÃO DEFINIDO"}:
             remover.append(nome)
 
     for nome in remover:
@@ -1132,11 +1192,21 @@ def processar_dados(acoes, indicadores, notificacoes, organograma):
         "processos_sem_responsavel": {}
     }
 
+    inicializar_responsaveis_do_organograma(
+        resultado,
+        detalhes,
+        organograma
+    )
+
     processar_acoes(acoes, resultado, detalhes, mapa_org)
     processar_indicadores(indicadores, resultado, detalhes, mapa_org)
     processar_notificacoes(notificacoes, resultado, detalhes, mapa_org, diagnosticos)
     limpar_resultado_vazio(resultado, detalhes)
     calcular_score_final(resultado)
+
+    for dados_resp in resultado.values():
+        dados_resp.pop("_oficial_organograma", None)
+
     diretorias = montar_diretorias(resultado)
 
     return resultado, diretorias, detalhes, diagnosticos
@@ -1288,3 +1358,4 @@ if arquivo:
     except Exception as erro:
         st.error("Erro ao processar o dashboard.")
         st.exception(erro)
+
